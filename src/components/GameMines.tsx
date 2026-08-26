@@ -51,6 +51,7 @@ export const GameMines: React.FC = () => {
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
   const [isCashout, setIsCashout] = useState<boolean>(false);
   const [alertMsg, setAlertMsg] = useState<{ text: string; isError: boolean } | null>(null);
+  const [flashWin, setFlashWin] = useState(false);
 
   // Initialize board representation
   useEffect(() => {
@@ -158,6 +159,9 @@ export const GameMines: React.FC = () => {
   const handleCashOut = (currentBoard = board, currentGemsCount = gemsFound) => {
     if (!isPlaying || isGameOver || isCashout) return;
 
+    setFlashWin(true);
+    setTimeout(() => setFlashWin(false), 2000);
+
     setIsCashout(true);
     setIsPlaying(false);
     revealAllMines(currentBoard);
@@ -190,7 +194,7 @@ export const GameMines: React.FC = () => {
       <div className={styles.gameLayout}>
         
         {/* Grid Area */}
-        <div className={styles.gridArena}>
+        <div className={`${styles.gridArena} ${flashWin ? "flashWinner" : ""}`}>
           <div className={styles.grid}>
             {board.map((tile) => {
               const showGem = tile.isRevealed && !tile.hasMine;

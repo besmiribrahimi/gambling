@@ -36,6 +36,7 @@ export const GameRoulette: React.FC = () => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [alertMsg, setAlertMsg] = useState<{ text: string; isError: boolean } | null>(null);
   const [wheelRotation, setWheelRotation] = useState(0);
+  const [flashWin, setFlashWin] = useState(false);
   const [history, setHistory] = useState<Array<"red" | "black" | "gold">>([
     "red",
     "black",
@@ -121,6 +122,8 @@ export const GameRoulette: React.FC = () => {
       const payout = didWin ? betAmount * multiplier : 0;
 
       if (didWin) {
+        setFlashWin(true);
+        setTimeout(() => setFlashWin(false), 2000);
         setBalance((prev) => prev + payout);
         setAlertMsg({
           text: `Victory! Landed on ${winningSlot.color.toUpperCase()} (${winningSlot.label}). Won +${payout} War Bonds!`,
@@ -181,7 +184,7 @@ export const GameRoulette: React.FC = () => {
       <div className={styles.gameLayout}>
         
         {/* Wheel Arena Section */}
-        <div className={styles.wheelArena}>
+        <div className={`${styles.wheelArena} ${flashWin ? "flashWinner" : ""}`}>
           <div className={styles.wheelPointer} />
           
           <div className={styles.wheelOuterCasing}>

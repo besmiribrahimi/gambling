@@ -27,6 +27,7 @@ export const GameSlots: React.FC = () => {
   const [isSpinning, setIsSpinning] = useState<boolean>(false);
   const [spinningReels, setSpinningReels] = useState<boolean[]>([false, false, false]);
   const [alertMsg, setAlertMsg] = useState<{ text: string; isError: boolean } | null>(null);
+  const [flashWin, setFlashWin] = useState(false);
 
   const spinIntervalRefs = useRef<(NodeJS.Timeout | null)[]>([null, null, null]);
   const stopTimeoutRefs = useRef<(NodeJS.Timeout | null)[]>([null, null, null]);
@@ -146,6 +147,8 @@ export const GameSlots: React.FC = () => {
     const payout = didWin ? Math.round(amt * multiplier) : 0;
 
     if (didWin) {
+      setFlashWin(true);
+      setTimeout(() => setFlashWin(false), 2000);
       setAlertMsg({
         text: `Jackpot! Landed [${s1} ${s2} ${s3}]. Won +${payout} War Bonds! (${multiplier}x multiplier)`,
         isError: false
@@ -177,7 +180,7 @@ export const GameSlots: React.FC = () => {
       <div className={styles.gameLayout}>
         
         {/* Reels Arena */}
-        <div className={styles.slotsArena}>
+        <div className={`${styles.slotsArena} ${flashWin ? "flashWinner" : ""}`}>
           <div className={styles.reelsContainer}>
             <div className={`${styles.reel} ${spinningReels[0] ? styles.spinning : ""}`}>
               {reels[0]}

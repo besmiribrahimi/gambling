@@ -262,5 +262,20 @@ h1, h2, h3, h4, h5, h6 {
 .tickerTarget {
   color: var(--color-secondary);
 }
+@keyframes flashWinnerStrobe {
+  0%, 100% {
+    background-color: rgba(0, 230, 118, 0.08);
+    box-shadow: 0 0 30px rgba(0, 230, 118, 0.35), inset 0 0 40px rgba(0, 230, 118, 0.2);
+    border-color: #00e676 !important;
+  }
+  50% {
+    background-color: rgba(255, 170, 0, 0.08);
+    box-shadow: 0 0 30px rgba(255, 170, 0, 0.35), inset 0 0 40px rgba(255, 170, 0, 0.2);
+    border-color: #ffaa00 !important;
+  }
+}
 
+.flashWinner {
+  animation: flashWinnerStrobe 0.18s infinite alternate;
+}
 

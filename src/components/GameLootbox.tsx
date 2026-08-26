@@ -70,6 +70,7 @@ export const GameLootbox: React.FC = () => {
   const [transitionDur, setTransitionDur] = useState(0);
   const [wonItem, setWonItem] = useState<SkinTemplate | null>(null);
   const [alert, setAlert] = useState<string | null>(null);
+  const [flashWin, setFlashWin] = useState(false);
   
   const trackRef = useRef<HTMLDivElement | null>(null);
 
@@ -158,6 +159,10 @@ export const GameLootbox: React.FC = () => {
       setIsSpinning(false);
       const won = tempTrack[winningIndex];
       setWonItem(won);
+      if (won.rarity === "legendary" || won.rarity === "exotic") {
+        setFlashWin(true);
+        setTimeout(() => setFlashWin(false), 2500);
+      }
     }, 4100);
   };
 
@@ -217,7 +222,7 @@ export const GameLootbox: React.FC = () => {
       )}
 
       {/* Case Opener Spinner */}
-      <div className={styles.spinnerSection}>
+      <div className={`${styles.spinnerSection} ${flashWin ? "flashWinner" : ""}`}>
         <div className={styles.spinnerViewport}>
           <div className={styles.spinnerCenterLine} />
           

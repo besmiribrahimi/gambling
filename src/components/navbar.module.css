@@ -108,7 +108,7 @@
 }
 
 .pulse {
-  animation: balancePulse 0.4s ease-out;
+  animation: balancePulse 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 /* Authentication styles */
@@ -181,14 +181,21 @@
 @keyframes balancePulse {
   0% {
     transform: scale(1);
+    filter: drop-shadow(0 0 0 rgba(255, 170, 0, 0));
   }
-  50% {
-    transform: scale(1.1);
-    color: var(--color-primary);
-    text-shadow: 0 0 8px var(--color-primary);
+  25% {
+    transform: scale(1.2);
+    color: #ffaa00;
+    filter: drop-shadow(0 0 15px #ffaa00);
+  }
+  60% {
+    transform: scale(0.92);
+    color: #00f0ff;
+    filter: drop-shadow(0 0 20px #00f0ff);
   }
   100% {
     transform: scale(1);
+    filter: drop-shadow(0 0 0 rgba(0, 240, 255, 0));
   }
 }
 
