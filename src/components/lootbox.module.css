@@ -1,0 +1,325 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+}
+
+.casesRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+
+.caseCard {
+  background: linear-gradient(135deg, rgba(20, 26, 40, 0.7) 0%, rgba(12, 17, 27, 0.8) 100%);
+  border: var(--border-light);
+  border-radius: var(--border-radius-md);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  transition: all var(--transition-normal);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.caseCard:hover {
+  border-color: rgba(0, 240, 255, 0.25);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
+}
+
+.caseTitle {
+  font-family: var(--font-family-title);
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-top: 0.5rem;
+}
+
+.caseCost {
+  font-family: var(--font-family-title);
+  font-size: 1.1rem;
+  color: var(--color-primary);
+  font-weight: 800;
+}
+
+.oddsBox {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  width: 100%;
+}
+
+.oddsDot {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.buyCaseBtn {
+  width: 100%;
+  padding: 0.75rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--border-radius-sm);
+  text-transform: uppercase;
+}
+
+.buyCaseBtn:hover:not(:disabled) {
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: var(--glow-primary);
+}
+
+.buyCaseBtn:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+/* Lootbox Spinner Visuals */
+.spinnerSection {
+  background: #090c15;
+  border: var(--border-light);
+  border-radius: var(--border-radius-md);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8);
+}
+
+.spinnerViewport {
+  position: relative;
+  width: 100%;
+  max-width: 700px;
+  height: 140px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--border-radius-sm);
+}
+
+.spinnerCenterLine {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  height: 100%;
+  background-color: var(--color-accent);
+  box-shadow: var(--glow-accent);
+  z-index: 5;
+}
+
+.spinnerTrack {
+  display: flex;
+  gap: 10px;
+  padding: 15px 0;
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  will-change: transform;
+}
+
+.spinnerItem {
+  width: 110px;
+  height: 110px;
+  background: linear-gradient(135deg, rgba(30, 36, 50, 0.5) 0%, rgba(15, 20, 30, 0.6) 100%);
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 0.5rem;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.itemLabel {
+  font-size: 0.65rem;
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  height: 28px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.itemRarityBadge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  margin-top: 0.4rem;
+  text-transform: uppercase;
+}
+
+/* Rarity Color Themes */
+.common {
+  border-bottom: 4px solid #007aff;
+  color: #007aff;
+}
+.rare {
+  border-bottom: 4px solid #bd00ff;
+  color: #bd00ff;
+}
+.legendary {
+  border-bottom: 4px solid #ff007a;
+  color: #ff007a;
+}
+.exotic {
+  border-bottom: 4px solid #ffaa00;
+  color: #ffaa00;
+  box-shadow: inset 0 0 10px rgba(255, 170, 0, 0.1);
+}
+
+/* Spinner Overlay Result */
+.resultBanner {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  animation: bannerFadeIn 0.3s ease-out;
+}
+
+.wonTitle {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.wonSkinName {
+  font-family: var(--font-family-title);
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.resultBtns {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.resultBtn {
+  padding: 0.6rem 1.2rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border-radius: var(--border-radius-sm);
+}
+
+.sellBtn {
+  background: rgba(255, 23, 68, 0.1);
+  border: 1px solid rgba(255, 23, 68, 0.3);
+  color: var(--color-danger);
+}
+
+.sellBtn:hover {
+  background: rgba(255, 23, 68, 0.2);
+  border-color: var(--color-danger);
+}
+
+.keepBtn {
+  background: rgba(0, 230, 118, 0.1);
+  border: 1px solid rgba(0, 230, 118, 0.3);
+  color: var(--color-success);
+}
+
+.keepBtn:hover {
+  background: rgba(0, 230, 118, 0.2);
+  border-color: var(--color-success);
+}
+
+/* Inventory Sections */
+.inventorySection {
+  background: linear-gradient(135deg, rgba(20, 26, 40, 0.7) 0%, rgba(12, 17, 27, 0.8) 100%);
+  border: var(--border-light);
+  border-radius: var(--border-radius-md);
+  padding: 1.5rem;
+}
+
+.inventoryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 0.75rem;
+}
+
+.inventoryTitle {
+  font-family: var(--font-family-title);
+  font-size: 1.2rem;
+}
+
+.inventoryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 1rem;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.invCard {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: var(--border-radius-sm);
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 120px;
+  text-align: center;
+}
+
+.invSellBtn {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+}
+
+.invSellBtn:hover {
+  background: rgba(255, 23, 68, 0.1);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.emptyInventory {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  padding: 3rem 0;
+}
+
+@keyframes bannerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

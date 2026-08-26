@@ -1,0 +1,444 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 1rem 0;
+  width: 100%;
+}
+
+.gameLayout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  align-items: center;
+}
+
+@media (min-width: 900px) {
+  .gameLayout {
+    grid-template-columns: 1.1fr 1fr;
+    gap: 3rem;
+  }
+}
+
+/* Wheel Arena Section */
+.wheelArena {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--border-radius-md);
+  padding: 2.5rem 1.5rem;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.6);
+}
+
+.wheelOuterCasing {
+  position: relative;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  padding: 8px;
+  background: radial-gradient(circle, #2a2e3a 0%, #151821 70%, #0d0f15 100%);
+  border: 4px solid rgba(255, 170, 0, 0.3);
+  box-shadow: 
+    0 10px 40px rgba(0, 0, 0, 0.7),
+    0 0 30px rgba(255, 170, 0, 0.15),
+    inset 0 4px 12px rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wheelInner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+  position: relative;
+  pointer-events: none;
+}
+
+.wheelGraphic {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Selector Pointer/Pin */
+.wheelPointer {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: 0;
+  height: 0;
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-top: 26px solid #ffaa00;
+  filter: drop-shadow(0 0 10px rgba(255, 170, 0, 0.8));
+  animation: pointerFloat 2s ease-in-out infinite;
+}
+
+.wheelCenterCap {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  background: radial-gradient(circle, #2c3345 0%, #12151f 100%);
+  border: 3.5px solid #ffaa00;
+  border-radius: 50%;
+  box-shadow: 
+    0 4px 15px rgba(0, 0, 0, 0.6),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-family-title);
+  font-weight: 900;
+  font-size: 1.1rem;
+  color: #ffaa00;
+  text-shadow: 0 0 8px rgba(255, 170, 0, 0.6);
+  z-index: 5;
+}
+
+/* Wager Dashboard Section */
+.wagerPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sectionHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.title {
+  font-family: var(--font-family-title);
+  font-size: 1.5rem;
+  font-weight: 900;
+  background: linear-gradient(90deg, #ffaa00 0%, #fff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+/* Betting Board Grid */
+.betBoard {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+}
+
+.betOption {
+  background: rgba(255, 255, 255, 0.02);
+  border: 2.5px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--border-radius-md);
+  padding: 1.25rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  transition: all var(--transition-fast);
+}
+
+.betOption:hover {
+  transform: translateY(-2px);
+}
+
+.betOptionRed {
+  background: linear-gradient(135deg, rgba(230, 0, 0, 0.08) 0%, rgba(128, 0, 0, 0.15) 100%);
+  border-color: rgba(230, 0, 0, 0.25);
+}
+.betOptionRed:hover, .betOptionRedActive {
+  background: linear-gradient(135deg, rgba(230, 0, 0, 0.15) 0%, rgba(128, 0, 0, 0.28) 100%) !important;
+  border-color: #ff3333 !important;
+  box-shadow: 0 0 20px rgba(230, 0, 0, 0.35);
+}
+
+.betOptionBlack {
+  background: linear-gradient(135deg, rgba(30, 35, 48, 0.4) 0%, rgba(10, 12, 17, 0.6) 100%);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+.betOptionBlack:hover, .betOptionBlackActive {
+  background: linear-gradient(135deg, rgba(45, 53, 71, 0.6) 0%, rgba(20, 24, 33, 0.8) 100%) !important;
+  border-color: var(--color-primary) !important;
+  box-shadow: var(--glow-primary);
+}
+
+.betOptionGold {
+  background: linear-gradient(135deg, rgba(255, 170, 0, 0.08) 0%, rgba(128, 80, 0, 0.15) 100%);
+  border-color: rgba(255, 170, 0, 0.25);
+}
+.betOptionGold:hover, .betOptionGoldActive {
+  background: linear-gradient(135deg, rgba(255, 170, 0, 0.15) 0%, rgba(128, 80, 0, 0.28) 100%) !important;
+  border-color: #ffaa00 !important;
+  box-shadow: 0 0 20px rgba(255, 170, 0, 0.35);
+}
+
+.colorLabel {
+  font-family: var(--font-family-title);
+  font-weight: 900;
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.redText { color: #ff4d4d; text-shadow: 0 0 6px rgba(255, 77, 77, 0.3); }
+.blackText { color: #8e9dbf; text-shadow: 0 0 6px rgba(142, 157, 191, 0.2); }
+.goldText { color: #ffcc00; text-shadow: 0 0 6px rgba(255, 204, 0, 0.35); }
+
+.payoutBadge {
+  font-size: 0.72rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  color: var(--color-text-secondary);
+  font-weight: 700;
+}
+
+/* Wager Config Inputs */
+.wagerPanelInner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1.25rem;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.inputHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.inputLabel {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.wagerInputRow {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--border-radius-sm);
+  padding: 0.6rem;
+}
+
+.wagerInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  padding: 0.1rem;
+}
+
+.wagerInput:focus {
+  outline: none;
+}
+
+.maxBtn {
+  font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 0.3rem 0.65rem;
+  border-radius: 4px;
+  font-weight: 800;
+  color: #fff;
+  cursor: pointer;
+  border: none;
+  transition: all var(--transition-fast);
+}
+
+.maxBtn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Casino Chips shortcuts */
+.chipRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.chip {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-family-title);
+  font-size: 0.68rem;
+  font-weight: 900;
+  cursor: pointer;
+  user-select: none;
+  transition: all var(--transition-fast);
+  color: #fff;
+  border: 2px dashed rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.chip:hover {
+  transform: translateY(-3px) rotate(10deg);
+}
+
+.chip:active {
+  transform: translateY(1px);
+}
+
+.chipRed {
+  background: radial-gradient(circle, #e60000 0%, #800000 100%);
+  box-shadow: 0 0 8px rgba(230, 0, 0, 0.3);
+}
+.chipGreen {
+  background: radial-gradient(circle, #00b050 0%, #006000 100%);
+  box-shadow: 0 0 8px rgba(0, 176, 80, 0.3);
+}
+.chipBlue {
+  background: radial-gradient(circle, #0070c0 0%, #003660 100%);
+  box-shadow: 0 0 8px rgba(0, 112, 192, 0.3);
+}
+.chipPurple {
+  background: radial-gradient(circle, #7030a0 0%, #401060 100%);
+  box-shadow: 0 0 8px rgba(112, 48, 160, 0.3);
+}
+.chipGold {
+  background: radial-gradient(circle, #ffaa00 0%, #805000 100%);
+  box-shadow: 0 0 8px rgba(255, 170, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Action Spin Button */
+.spinBtn {
+  background: linear-gradient(90deg, #ffaa00 0%, #ff8c00 100%);
+  color: #000;
+  padding: 0.9rem;
+  border-radius: var(--border-radius-sm);
+  font-weight: 900;
+  text-align: center;
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 0 15px rgba(255, 170, 0, 0.2);
+  transition: all var(--transition-fast);
+}
+
+.spinBtn:hover:not(:disabled) {
+  box-shadow: 0 0 25px rgba(255, 170, 0, 0.45);
+  transform: translateY(-1px);
+}
+
+.spinBtn:disabled {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+  border: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+/* Feedback Notifications */
+.alertBox {
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 0.75rem;
+  border-radius: var(--border-radius-sm);
+  font-weight: 700;
+}
+
+.successAlert {
+  background: rgba(0, 230, 118, 0.12);
+  color: var(--color-success);
+  border: 1px solid rgba(0, 230, 118, 0.2);
+  box-shadow: var(--glow-success);
+}
+
+.errorAlert {
+  background: rgba(255, 23, 68, 0.12);
+  color: var(--color-danger);
+  border: 1px solid rgba(255, 23, 68, 0.2);
+}
+
+/* Spinning Animation decelerations */
+@keyframes pointerFloat {
+  0%, 100% {
+    top: -12px;
+  }
+  50% {
+    top: -8px;
+  }
+}
+
+/* History logs of landing colors */
+.historySection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.historyTitle {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.historyTrack {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.historyNode {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 900;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.historyRed {
+  background: radial-gradient(circle, #e60000 0%, #800000 100%);
+  box-shadow: 0 0 6px rgba(230, 0, 0, 0.3);
+}
+
+.historyBlack {
+  background: radial-gradient(circle, #2d3547 0%, #0d0f15 100%);
+  box-shadow: 0 0 6px rgba(45, 53, 71, 0.25);
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+.historyGold {
+  background: radial-gradient(circle, #ffaa00 0%, #805000 100%);
+  box-shadow: 0 0 6px rgba(255, 170, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}

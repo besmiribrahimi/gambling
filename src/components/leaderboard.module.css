@@ -1,0 +1,123 @@
+.container {
+  background: linear-gradient(135deg, rgba(20, 26, 40, 0.7) 0%, rgba(12, 17, 27, 0.8) 100%);
+  border: var(--border-light);
+  border-radius: var(--border-radius-md);
+  padding: 1.5rem;
+  width: 100%;
+}
+
+.titleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 0.75rem;
+}
+
+.title {
+  font-family: var(--font-family-title);
+  font-size: 1.3rem;
+}
+
+.subtitle {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.table th {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.table td {
+  padding: 1rem;
+  font-size: 0.9rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  vertical-align: middle;
+}
+
+.row {
+  transition: background var(--transition-fast);
+}
+
+.row:hover {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+/* User highlighting */
+.userRow {
+  background: rgba(0, 240, 255, 0.04) !important;
+  border-left: 3px solid var(--color-primary);
+}
+
+.userRow td {
+  color: #fff;
+  font-weight: 700;
+}
+
+.rankBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: 0.8rem;
+  font-family: var(--font-family-title);
+}
+
+.rank1 {
+  background: linear-gradient(135deg, #ffd700 0%, #cca000 100%);
+  color: #000;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+.rank2 {
+  background: linear-gradient(135deg, #c0c0c0 0%, #8c8c8c 100%);
+  color: #000;
+}
+
+.rank3 {
+  background: linear-gradient(135deg, #cd7f32 0%, #8b4513 100%);
+  color: #000;
+}
+
+.rankOther {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-secondary);
+}
+
+.playerName {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.userTag {
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: var(--color-primary);
+  color: #000;
+  text-transform: uppercase;
+}
+
+.balance {
+  font-family: var(--font-family-title);
+  font-weight: 700;
+  color: var(--color-primary);
+}

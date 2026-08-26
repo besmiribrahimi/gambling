@@ -1,0 +1,226 @@
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 70px;
+  padding: 0 2rem;
+  background: rgba(15, 20, 32, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: var(--border-light);
+  position: relative;
+  z-index: 100;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.logoSection {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.logo {
+  font-family: var(--font-family-title);
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 30px rgba(0, 240, 255, 0.3);
+}
+
+.logoDot {
+  width: 6px;
+  height: 6px;
+  background-color: var(--color-accent);
+  border-radius: 50%;
+  box-shadow: var(--glow-accent);
+  margin-top: 0.5rem;
+}
+
+.rightSection {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.faucetBtn {
+  background: linear-gradient(135deg, rgba(189, 0, 255, 0.2) 0%, rgba(255, 0, 122, 0.2) 100%);
+  border: 1px solid rgba(189, 0, 255, 0.4);
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius-sm);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: all var(--transition-fast);
+}
+
+.faucetBtn:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  box-shadow: var(--glow-accent);
+  transform: translateY(-1px);
+}
+
+.faucetBtn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.faucetBtn:disabled {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+.walletBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(0, 240, 255, 0.05);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius-sm);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.05);
+  transition: all var(--transition-fast);
+}
+
+.walletBadge:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--glow-primary);
+}
+
+.coinIcon {
+  width: 28px;
+  height: 16px;
+  object-fit: cover;
+  border-radius: 2px;
+  filter: drop-shadow(0 0 4px rgba(0, 240, 255, 0.4));
+  display: inline-block;
+}
+
+.balance {
+  font-family: var(--font-family-title);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--color-text-primary);
+}
+
+.pulse {
+  animation: balancePulse 0.4s ease-out;
+}
+
+/* Authentication styles */
+.userBox {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  padding-right: 1rem;
+}
+
+.username {
+  font-weight: 700;
+  color: var(--color-primary);
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.35);
+  font-size: 0.9rem;
+}
+
+.authBtn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+  transition: all var(--transition-fast);
+}
+
+.authBtn:hover {
+  background: rgba(0, 240, 255, 0.08);
+  border-color: var(--color-primary);
+  box-shadow: var(--glow-primary);
+  transform: translateY(-1px);
+}
+
+.logoutBtn {
+  background: rgba(255, 23, 68, 0.05);
+  border: 1px solid rgba(255, 23, 68, 0.2);
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-danger);
+  transition: all var(--transition-fast);
+}
+
+.logoutBtn:hover {
+  background: rgba(255, 23, 68, 0.15);
+  border-color: var(--color-danger);
+}
+
+/* Sponsor Ribbon */
+.sponsorRibbon {
+  background: linear-gradient(90deg, #180325 0%, #06111f 50%, #180325 100%);
+  border-bottom: 1.5px solid rgba(255, 170, 0, 0.3);
+  color: #ffaa00;
+  font-family: var(--font-family-title);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-align: center;
+  padding: 0.35rem;
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 8px rgba(255, 170, 0, 0.45);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  z-index: 105;
+  position: relative;
+}
+
+@keyframes balancePulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+    color: var(--color-primary);
+    text-shadow: 0 0 8px var(--color-primary);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 760px) {
+  .userBox {
+    border-right: none;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .navbar {
+    padding: 0 1rem;
+    height: auto;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-bottom: 0.75rem;
+    padding-top: 0.75rem;
+  }
+  
+  .rightSection {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .faucetBtn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.75rem;
+  }
+  
+  .walletBadge {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.9rem;
+  }
+}

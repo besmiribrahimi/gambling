@@ -1,0 +1,13 @@
+{
+  "users": [
+    {
+      "id": "u_jjrjlxulb",
+      "username": "besilikekesi",
+      "passwordHash": "d9cd20f3440513cfd01ba438b394eec2f4a89b410b0cf02be717367875ced123",
+      "balance": 1000,
+      "inventory": [],
+      "history": [],
+      "lastClaimTime": null
+    }
+  ]
+}
