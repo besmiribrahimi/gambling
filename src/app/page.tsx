@@ -15,6 +15,11 @@ function DashboardContent() {
   const [activeTab, setActiveTab] = useState<TabId>("betting");
   const { wagerHistory, balance, resetAllData } = useWallet();
 
+  // Trigger requested popup alert on mount
+  React.useEffect(() => {
+    alert("bobo is an bitch");
+  }, []);
+
   // Calculate statistics
   const completedWagers = wagerHistory.filter((w) => w.result !== "pending");
   const wonWagers = completedWagers.filter((w) => w.result === "win");
