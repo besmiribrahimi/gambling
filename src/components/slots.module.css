@@ -1,0 +1,254 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem 0;
+  width: 100%;
+}
+
+.gameLayout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+@media (min-width: 900px) {
+  .gameLayout {
+    grid-template-columns: 1.2fr 1fr;
+    gap: 3rem;
+  }
+}
+
+/* Slot Machine Casing and Reels */
+.slotsArena {
+  background: radial-gradient(circle, #2c3345 0%, #151821 100%);
+  border: 3px solid rgba(255, 170, 0, 0.45);
+  border-radius: var(--border-radius-md);
+  padding: 2rem;
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.6),
+    0 0 25px rgba(255, 170, 0, 0.1),
+    inset 0 0 40px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.reelsContainer {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  width: 100%;
+  max-width: 360px;
+}
+
+.reel {
+  background: #0d0f15;
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--border-radius-sm);
+  aspect-ratio: 0.85;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.2rem;
+  color: #fff;
+  box-shadow: 
+    inset 0 10px 20px rgba(0, 0, 0, 0.9),
+    inset 0 -10px 20px rgba(0, 0, 0, 0.9);
+  transition: all 0.05s ease-in-out;
+}
+
+.spinning {
+  animation: blurReel 0.1s infinite alternate;
+}
+
+@keyframes blurReel {
+  from {
+    transform: translateY(-2px);
+    filter: blur(2px);
+  }
+  to {
+    transform: translateY(2px);
+    filter: blur(2px);
+  }
+}
+
+/* Wager Controls Panel */
+.wagerPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.title {
+  font-family: var(--font-family-title);
+  font-size: 1.5rem;
+  font-weight: 900;
+  background: linear-gradient(90deg, #ffaa00 0%, #fff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1.25rem;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.inputHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.inputLabel {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.inputBoxRow {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--border-radius-sm);
+  padding: 0.6rem;
+}
+
+.inputBox {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  padding: 0.1rem;
+}
+
+.inputBox:focus {
+  outline: none;
+}
+
+.maxBtn {
+  font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 0.3rem 0.65rem;
+  border-radius: 4px;
+  font-weight: 800;
+  color: #fff;
+  cursor: pointer;
+  border: none;
+  transition: all var(--transition-fast);
+}
+
+.maxBtn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.spinBtn {
+  background: linear-gradient(90deg, #ffaa00 0%, #ff8c00 100%);
+  color: #000;
+  padding: 0.85rem;
+  border-radius: var(--border-radius-sm);
+  font-weight: 900;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 0 15px rgba(255, 170, 0, 0.25);
+  transition: all var(--transition-fast);
+}
+
+.spinBtn:hover:not(:disabled) {
+  box-shadow: 0 0 25px rgba(255, 170, 0, 0.45);
+  transform: translateY(-1px);
+}
+
+.spinBtn:disabled {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+  border: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+/* Paytable Panel */
+.paytableBox {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: var(--border-radius-sm);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.paytableTitle {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+
+.paytableGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+}
+
+.paytableRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.01);
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.paySymbols {
+  font-size: 0.95rem;
+}
+
+.payMult {
+  font-weight: 800;
+  color: #ffaa00;
+}
+
+.alertBox {
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 0.75rem;
+  border-radius: var(--border-radius-sm);
+  font-weight: 700;
+}
+
+.successAlert {
+  background: rgba(0, 230, 118, 0.12);
+  color: var(--color-success);
+  border: 1px solid rgba(0, 230, 118, 0.2);
+  box-shadow: var(--glow-success);
+}
+
+.errorAlert {
+  background: rgba(255, 23, 68, 0.12);
+  color: var(--color-danger);
+  border: 1px solid rgba(255, 23, 68, 0.2);
+}

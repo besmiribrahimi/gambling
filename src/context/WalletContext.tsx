@@ -12,7 +12,7 @@ export interface Skin {
 
 export interface Wager {
   id: string;
-  type: "bet" | "crash" | "coinflip" | "lootbox";
+  type: "bet" | "crash" | "coinflip" | "lootbox" | "mines" | "slots";
   description: string;
   amount: number;
   result: "win" | "lose" | "pending";

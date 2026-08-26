@@ -6,10 +6,12 @@ import Navbar from "../components/Navbar";
 import BettingArena from "../components/BettingArena";
 import GameLootbox from "../components/GameLootbox";
 import GameRoulette from "../components/GameRoulette";
+import GameMines from "../components/GameMines";
+import GameSlots from "../components/GameSlots";
 import AuthModal from "../components/AuthModal";
 import styles from "./page.module.css";
 
-type TabId = "betting" | "lootbox" | "roulette";
+type TabId = "betting" | "lootbox" | "roulette" | "mines" | "slots";
 
 function DashboardContent() {
   const [activeTab, setActiveTab] = useState<TabId>("betting");
@@ -41,6 +43,10 @@ function DashboardContent() {
         return <GameLootbox />;
       case "roulette":
         return <GameRoulette />;
+      case "mines":
+        return <GameMines />;
+      case "slots":
+        return <GameSlots />;
       default:
         return <BettingArena />;
     }
@@ -81,6 +87,20 @@ function DashboardContent() {
                 onClick={() => setActiveTab("roulette")}
               >
                 <span className={styles.tabIcon}>🎡</span> Roulette Wheel
+              </button>
+              <button
+                id="tab-btn-mines"
+                className={`${styles.tabBtn} ${activeTab === "mines" ? styles.activeTab : ""}`}
+                onClick={() => setActiveTab("mines")}
+              >
+                <span className={styles.tabIcon}>💣</span> Trench Mines
+              </button>
+              <button
+                id="tab-btn-slots"
+                className={`${styles.tabBtn} ${activeTab === "slots" ? styles.activeTab : ""}`}
+                onClick={() => setActiveTab("slots")}
+              >
+                <span className={styles.tabIcon}>🎰</span> Trench Slots
               </button>
             </div>
 
