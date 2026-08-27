@@ -6,10 +6,21 @@ import { findUserById, updateUser, DBUser } from "../../../../lib/db";
 async function isAdminAuthorized(): Promise<boolean> {
   const cookieStore = await cookies();
   const adminCookie = cookieStore.get("cw_admin_session");
-  if (!adminCookie) return false;
+  if (adminCookie) {
+    const payload = decryptSession(adminCookie.value);
+    if (payload === "clashwager_admin_authorized") return true;
+  }
 
-  const payload = decryptSession(adminCookie.value);
-  return payload === "clashwager_admin_authorized";
+  const userCookie = cookieStore.get("cw_session");
+  if (userCookie) {
+    const userId = decryptSession(userCookie.value);
+    if (userId) {
+      const user = await findUserById(userId);
+      if (user && user.role === "admin" && !user.isBanned) return true;
+    }
+  }
+
+  return false;
 }
 
 export async function POST(request: Request) {
