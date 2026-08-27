@@ -433,6 +433,10 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [rakebackBalance, vipTier.name, addTransaction]);
 
   const placeMatchBet = useCallback((matchId: string, team: "teamA" | "teamB", amount: number) => {
+    if (!user) {
+      setIsAuthOpen(true);
+      return { success: false, message: "Please sign in or register to place tournament predictions!" };
+    }
     if (amount <= 0) {
       return { success: false, message: "Enter a valid bet amount." };
     }

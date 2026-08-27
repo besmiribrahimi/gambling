@@ -64,7 +64,7 @@ const CRATES: Crate[] = [
 ];
 
 export const GameLootbox: React.FC = () => {
-  const { balance, setBalance, inventory, addSkinToInventory, sellSkin, sellMultipleSkins, addTransaction } = useWallet();
+  const { balance, setBalance, inventory, addSkinToInventory, sellSkin, sellMultipleSkins, addTransaction, user, setIsAuthOpen } = useWallet();
   const [isSpinning, setIsSpinning] = useState(false);
   const [fastOpen, setFastOpen] = useState(false);
   const [trackItems, setTrackItems] = useState<SkinTemplate[]>([]);
@@ -103,6 +103,11 @@ export const GameLootbox: React.FC = () => {
 
   const handleOpenCrate = (crate: Crate) => {
     if (isSpinning) return;
+
+    if (!user) {
+      setIsAuthOpen(true);
+      return;
+    }
     if (balance < crate.cost) {
       setAlert("Insufficient War Bonds balance to open this crate.");
       return;

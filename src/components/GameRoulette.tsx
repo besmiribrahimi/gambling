@@ -30,7 +30,7 @@ const ROULETTE_SLOTS: RouletteSlot[] = [
 ];
 
 export const GameRoulette: React.FC = () => {
-  const { balance, setBalance, addTransaction } = useWallet();
+  const { balance, setBalance, addTransaction, user, setIsAuthOpen } = useWallet();
   const [selectedColor, setSelectedColor] = useState<"red" | "black" | "gold" | null>(null);
   const [wager, setWager] = useState("100");
   const [isSpinning, setIsSpinning] = useState(false);
@@ -71,6 +71,11 @@ export const GameRoulette: React.FC = () => {
 
   const handleSpinWheel = () => {
     if (isSpinning) return;
+
+    if (!user) {
+      setIsAuthOpen(true);
+      return;
+    }
 
     if (!selectedColor) {
       setAlertMsg({ text: "Select RED, BLACK, or GOLD to place your bet.", isError: true });

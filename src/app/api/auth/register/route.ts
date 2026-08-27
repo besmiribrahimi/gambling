@@ -71,8 +71,8 @@ export async function POST(request: Request) {
 
     const userId = "u_" + Math.random().toString(36).substring(2, 11);
     
-    // Smooth migration: if guest has balance >= 1000, keep their current balance, otherwise grant 1000 signin bonus
-    const startingBalance = typeof guestBalance === "number" && guestBalance > 0 ? guestBalance : 1000;
+    // Every new joining player receives strictly 1,000 War Bonds starting balance
+    const startingBalance = 1000;
     const initialInventory = Array.isArray(guestInventory) ? guestInventory : [];
     const initialHistory = Array.isArray(guestHistory) ? guestHistory : [];
 
