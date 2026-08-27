@@ -8,7 +8,7 @@ export async function GET() {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get("cw_session");
 
-    if (!sessionCookie) {
+    if (!sessionCookie || !sessionCookie.value) {
       return NextResponse.json({ loggedIn: false });
     }
 
@@ -19,11 +19,15 @@ export async function GET() {
 
     const user = await findUserById(userId);
 
-    if (!user || user.isBanned) {
-      const cookieStore = await cookies();
+    if (!user) {
+      // Don't aggressively delete cookie on transient DB hiccups
+      return NextResponse.json({ loggedIn: false });
+    }
+
+    if (user.isBanned) {
       cookieStore.delete("cw_session");
       cookieStore.delete("cw_admin_session");
-      return NextResponse.json({ loggedIn: false });
+      return NextResponse.json({ loggedIn: false, error: "Account banned." });
     }
 
     const { passwordHash, ...userResponse } = user;

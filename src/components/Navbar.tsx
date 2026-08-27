@@ -15,6 +15,7 @@ export const Navbar: React.FC = () => {
     setIsFairModalOpen,
     setIsSettingsOpen,
     setIsAdminOpen,
+    setIsVerificationModalOpen,
     logoutUser,
     vipTier,
     vipProgress,
@@ -36,6 +37,34 @@ export const Navbar: React.FC = () => {
 
   return (
     <>
+      {/* High-Visibility Unverified Alert Banner */}
+      {user && !user.isVerified && user.role !== "admin" && (
+        <div
+          onClick={() => { setIsVerificationModalOpen(true); sound.playClick(); }}
+          style={{
+            background: "linear-gradient(90deg, #ff9100 0%, #ff5252 100%)",
+            color: "#000",
+            padding: "0.45rem 1rem",
+            fontSize: "0.8rem",
+            fontWeight: 800,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "0.6rem",
+            textAlign: "center",
+            cursor: "pointer",
+            boxShadow: "0 2px 10px rgba(255, 145, 0, 0.4)",
+            zIndex: 999
+          }}
+        >
+          <span>⚠️ ACCOUNT UNVERIFIED:</span>
+          <span>Message <strong>hangugeoreulgusahalsu</strong> on Discord with your Profile SC to activate full status!</span>
+          <span style={{ background: "#000", color: "#ffd700", padding: "0.15rem 0.55rem", borderRadius: "4px", fontSize: "0.72rem", marginLeft: "0.4rem", fontWeight: 900 }}>
+            VERIFY NOW 👉
+          </span>
+        </div>
+      )}
+
       {/* Flashing Vegas/Casino Live Marquee Ticker */}
       <div className="tickerContainer">
         <div className="tickerTrack">
@@ -222,6 +251,13 @@ export const Navbar: React.FC = () => {
                       {user.username}
                     </span>
                     <span
+                      onClick={(e) => {
+                        if (!user.isVerified && user.role !== "admin") {
+                          e.stopPropagation();
+                          setIsVerificationModalOpen(true);
+                          sound.playClick();
+                        }
+                      }}
                       style={{
                         fontSize: "0.6rem",
                         fontWeight: 900,
@@ -243,10 +279,11 @@ export const Navbar: React.FC = () => {
                             : user.isVerified
                             ? "var(--color-success)"
                             : "#ffaa00"
-                        }`
+                        }`,
+                        cursor: !user.isVerified && user.role !== "admin" ? "pointer" : "default"
                       }}
                     >
-                      {user.role === "admin" ? "ADMIN" : user.isVerified ? "VERIFIED" : "UNVERIFIED"}
+                      {user.role === "admin" ? "ADMIN" : user.isVerified ? "VERIFIED" : "⚠️ UNVERIFIED"}
                     </span>
                   </div>
                   <span style={{ fontSize: "0.65rem", color: "var(--color-text-muted)" }}>

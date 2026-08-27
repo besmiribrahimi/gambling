@@ -51,8 +51,9 @@ export async function POST(request: Request) {
     const cookieStore = await cookies();
     cookieStore.set("cw_session", token, {
       httpOnly: true,
+      sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 30, // 30 days
       path: "/"
     });
 
@@ -61,8 +62,9 @@ export async function POST(request: Request) {
       const adminToken = encryptSession("clashwager_admin_authorized");
       cookieStore.set("cw_admin_session", adminToken, {
         httpOnly: true,
+        sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 60 * 4, // 4 hours
+        maxAge: 60 * 60 * 24, // 24 hours
         path: "/"
       });
     }

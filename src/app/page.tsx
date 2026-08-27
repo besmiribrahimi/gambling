@@ -20,6 +20,7 @@ import BigWinCelebration from "../components/BigWinCelebration";
 import AuthModal from "../components/AuthModal";
 import UserSettingsModal from "../components/UserSettingsModal";
 import AdminModal from "../components/AdminModal";
+import VerificationModal from "../components/VerificationModal";
 import LiveToastAlerts from "../components/LiveToastAlerts";
 import sound from "../lib/sound";
 import styles from "./page.module.css";
@@ -111,6 +112,7 @@ function DashboardContent() {
       <AuthModal />
       <AdminModal isOpen={isAdminOpen} onClose={() => setIsAdminOpen(false)} />
       <UserSettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <VerificationModal />
       <DailyRewardsModal />
       <ProvablyFairModal />
       <BigWinCelebration />

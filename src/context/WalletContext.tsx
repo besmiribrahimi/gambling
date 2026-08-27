@@ -77,7 +77,9 @@ interface WalletContextType {
   setIsSettingsOpen: (open: boolean) => void;
   isAdminOpen: boolean;
   setIsAdminOpen: (open: boolean) => void;
-  loginUser: (userData: { id: string; username: string; role?: "admin" | "user"; discord?: string; roblox?: string; isGuest?: boolean; balance: number; inventory?: Skin[]; history?: Wager[]; lastClaimTime?: number | null }) => void;
+  isVerificationModalOpen: boolean;
+  setIsVerificationModalOpen: (open: boolean) => void;
+  loginUser: (userData: { id: string; username: string; role?: "admin" | "user"; discord?: string; roblox?: string; isGuest?: boolean; isVerified?: boolean; balance: number; inventory?: Skin[]; history?: Wager[]; lastClaimTime?: number | null }) => void;
   logoutUser: () => void;
   balance: number;
   setBalance: React.Dispatch<React.SetStateAction<number>>;
@@ -177,6 +179,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isFairModalOpen, setIsFairModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
   const [bigWinModal, setBigWinModal] = useState<BigWinPayload | null>(null);
 
   const [balance, setBalance] = useState<number>(1000);
@@ -212,13 +215,25 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Load state on mount: Session check -> fallback to localStorage
   useEffect(() => {
+    // 1. Immediate client-side cache restoration to prevent refresh logout / flash
+    try {
+      const cached = localStorage.getItem("cw_user_cache");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.id) {
+          setUser(parsed);
+          if (parsed.balance !== undefined) setBalance(parsed.balance);
+        }
+      }
+    } catch (e) {}
+
     const fetchSession = async () => {
       try {
         const res = await fetch("/api/auth/me");
         const data = await res.json();
 
         if (data.loggedIn && data.user) {
-          setUser({
+          const freshUser: UserProfile = {
             id: data.user.id,
             username: data.user.username,
             role: data.user.role || "user",
@@ -226,12 +241,22 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             roblox: data.user.roblox,
             isGuest: false,
             isVerified: !!data.user.isVerified
-          });
+          };
+          setUser(freshUser);
+          localStorage.setItem("cw_user_cache", JSON.stringify(freshUser));
           setBalance(data.user.balance ?? 1000);
           setInventory(data.user.inventory || []);
           setWagerHistory(data.user.history || []);
           setLastClaimTime(data.user.lastClaimTime ?? null);
+        } else if (data.error === "Account banned.") {
+          localStorage.removeItem("cw_user_cache");
+          setUser(null);
         } else {
+          // If server says not logged in and no cache
+          const cached = localStorage.getItem("cw_user_cache");
+          if (!cached) {
+            setUser(null);
+          }
           // Guest mode from localStorage
           const storedBalance = localStorage.getItem("cw_balance");
           const storedInventory = localStorage.getItem("cw_inventory");
@@ -295,7 +320,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [balance, inventory, wagerHistory, matches, lastClaimTime, dailyStreak, rakebackBalance, isLoaded, user]);
 
   const loginUser = (userData: { id: string; username: string; role?: "admin" | "user"; discord?: string; roblox?: string; isGuest?: boolean; isVerified?: boolean; balance: number; inventory?: Skin[]; history?: Wager[]; lastClaimTime?: number | null }) => {
-    setUser({
+    const freshUser: UserProfile = {
       id: userData.id,
       username: userData.username,
       role: userData.role || "user",
@@ -303,7 +328,12 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       roblox: userData.roblox,
       isGuest: userData.isGuest || false,
       isVerified: userData.isVerified || false
-    });
+    };
+    setUser(freshUser);
+    try {
+      localStorage.setItem("cw_user_cache", JSON.stringify(freshUser));
+    } catch (e) {}
+
     setBalance(userData.balance ?? 1000);
     setInventory(userData.inventory || []);
     setWagerHistory(userData.history || []);
@@ -313,6 +343,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const logoutUser = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
+      localStorage.removeItem("cw_user_cache");
       setUser(null);
       setBalance(1000);
       setInventory([]);
@@ -552,6 +583,8 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isAdmin,
         isAdminOpen,
         setIsAdminOpen,
+        isVerificationModalOpen,
+        setIsVerificationModalOpen,
         isAuthOpen,
         setIsAuthOpen,
         isDailyModalOpen,
