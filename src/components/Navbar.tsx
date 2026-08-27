@@ -227,12 +227,26 @@ export const Navbar: React.FC = () => {
                         fontWeight: 900,
                         padding: "0.1rem 0.35rem",
                         borderRadius: "3px",
-                        background: user.role === "admin" ? "rgba(255, 0, 85, 0.25)" : "rgba(0, 230, 118, 0.25)",
-                        color: user.role === "admin" ? "#ff0055" : "var(--color-success)",
-                        border: `1px solid ${user.role === "admin" ? "#ff0055" : "var(--color-success)"}`
+                        background: user.role === "admin"
+                          ? "rgba(255, 0, 85, 0.25)"
+                          : user.isVerified
+                          ? "rgba(0, 230, 118, 0.25)"
+                          : "rgba(255, 170, 0, 0.25)",
+                        color: user.role === "admin"
+                          ? "#ff0055"
+                          : user.isVerified
+                          ? "var(--color-success)"
+                          : "#ffaa00",
+                        border: `1px solid ${
+                          user.role === "admin"
+                            ? "#ff0055"
+                            : user.isVerified
+                            ? "var(--color-success)"
+                            : "#ffaa00"
+                        }`
                       }}
                     >
-                      {user.role === "admin" ? "ADMIN" : "MEMBER"}
+                      {user.role === "admin" ? "ADMIN" : user.isVerified ? "VERIFIED" : "UNVERIFIED"}
                     </span>
                   </div>
                   <span style={{ fontSize: "0.65rem", color: "var(--color-text-muted)" }}>

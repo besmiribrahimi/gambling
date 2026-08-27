@@ -236,6 +236,19 @@ export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void 
                 <span className={styles.userRoleBadge} style={{ background: `${vipTier.color}25`, color: vipTier.color, border: `1px solid ${vipTier.color}50` }}>
                   {vipTier.badge} {vipTier.name} VIP
                 </span>
+                {user?.role === "admin" ? (
+                  <span style={{ fontSize: "0.65rem", padding: "0.15rem 0.4rem", borderRadius: "4px", background: "rgba(255, 0, 85, 0.25)", color: "#ff0055", border: "1px solid #ff0055", fontWeight: 900 }}>
+                    ⚡ ADMIN
+                  </span>
+                ) : user?.isVerified ? (
+                  <span style={{ fontSize: "0.65rem", padding: "0.15rem 0.4rem", borderRadius: "4px", background: "rgba(0, 230, 118, 0.2)", color: "var(--color-success)", border: "1px solid var(--color-success)", fontWeight: 900 }}>
+                    🛡️ VERIFIED MEMBER
+                  </span>
+                ) : (
+                  <span style={{ fontSize: "0.65rem", padding: "0.15rem 0.4rem", borderRadius: "4px", background: "rgba(255, 170, 0, 0.2)", color: "#ffaa00", border: "1px solid #ffaa00", fontWeight: 900 }}>
+                    ⚠️ UNVERIFIED
+                  </span>
+                )}
               </div>
               <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>
                 Balance: {balance.toLocaleString()} $ • Total Wagered: {totalWagered.toLocaleString()} $
@@ -304,6 +317,27 @@ export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void 
           {/* TAB 1: Profile & Identity */}
           {activeTab === "profile" && (
             <form onSubmit={handleSaveProfile} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+              {/* Discord Verification Guide Banner */}
+              {user && !user.isVerified && user.role !== "admin" && (
+                <div style={{
+                  background: "rgba(255, 170, 0, 0.08)",
+                  border: "1.5px dashed rgba(255, 170, 0, 0.5)",
+                  borderRadius: "8px",
+                  padding: "0.9rem 1.1rem",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.4rem"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#ffaa00", fontWeight: 800, fontSize: "0.88rem" }}>
+                    <span>⚠️</span>
+                    <span>ACCOUNT UNVERIFIED • DISCORD VERIFICATION REQUIRED</span>
+                  </div>
+                  <p style={{ fontSize: "0.8rem", color: "var(--color-text-secondary)", margin: 0, lineHeight: 1.45 }}>
+                    To verify your account, join our Discord server and message <strong>hangugeoreulgusahalsu</strong> with a screenshot (SC) of this profile!
+                  </p>
+                </div>
+              )}
+
               <div>
                 <h3 className={styles.sectionTitle}>Choose Casino Avatar</h3>
                 <p className={styles.sectionSubtitle}>Select your persona displayed in games, Trollbox chat, and leaderboards</p>
@@ -322,7 +356,9 @@ export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void 
 
               <div className={styles.formGrid}>
                 <div className={styles.fieldGroup}>
-                  <label className={styles.fieldLabel}>Linked Discord Handle</label>
+                  <label className={styles.fieldLabel}>
+                    Linked Discord Handle <span style={{ color: "#00f0ff", fontSize: "0.68rem" }}>(🔒 Private • Hidden)</span>
+                  </label>
                   <input
                     type="text"
                     className={styles.fieldInput}
@@ -333,7 +369,9 @@ export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void 
                 </div>
 
                 <div className={styles.fieldGroup}>
-                  <label className={styles.fieldLabel}>Linked Roblox Username</label>
+                  <label className={styles.fieldLabel}>
+                    Linked Roblox Username <span style={{ color: "#00f0ff", fontSize: "0.68rem" }}>(🔒 Private • Hidden)</span>
+                  </label>
                   <input
                     type="text"
                     className={styles.fieldInput}
@@ -342,6 +380,18 @@ export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void 
                     onChange={(e) => setRoblox(e.target.value)}
                   />
                 </div>
+              </div>
+
+              <div style={{
+                background: "rgba(0, 240, 255, 0.05)",
+                border: "1px solid rgba(0, 240, 255, 0.2)",
+                borderRadius: "6px",
+                padding: "0.6rem 0.8rem",
+                fontSize: "0.74rem",
+                color: "var(--color-text-secondary)",
+                lineHeight: 1.4
+              }}>
+                🔒 <strong>Privacy Notice:</strong> Your Roblox and Discord usernames are securely encrypted. They are strictly hidden and will never be shown on public leaderboards, games, or chat feeds.
               </div>
 
               <div className={styles.fieldGroup}>

@@ -65,6 +65,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, isBanned });
     }
 
+    if (action === "toggle-verification") {
+      const { isVerified } = payload;
+      if (typeof isVerified !== "boolean") {
+        return NextResponse.json({ error: "Invalid verification state." }, { status: 400 });
+      }
+
+      await updateUser(userId, { isVerified });
+      return NextResponse.json({ success: true, isVerified });
+    }
+
     if (action === "set-role") {
       const { role } = payload;
       if (role !== "admin" && role !== "user") {

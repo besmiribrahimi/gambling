@@ -83,7 +83,6 @@ export const AuthModal: React.FC = () => {
       setPassword("");
       sound.playWin();
 
-      // If user is admin, open admin center notification
       if (data.user.role === "admin") {
         sound.playJackpot();
       }
@@ -97,33 +96,54 @@ export const AuthModal: React.FC = () => {
 
   return (
     <div id="modal-auth" className={styles.overlay}>
-      <div className={styles.modal}>
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: "0.6rem" }}>
+      <div className={styles.modal} style={{ maxWidth: "460px" }}>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: "0.5rem" }}>
           <img
             src="/logo.png"
             alt="WarWager Logo"
             style={{
-              width: "68px",
-              height: "68px",
-              borderRadius: "14px",
+              width: "60px",
+              height: "60px",
+              borderRadius: "12px",
               border: "2px solid rgba(255, 215, 0, 0.6)",
-              boxShadow: "0 0 20px rgba(255, 215, 0, 0.35)",
+              boxShadow: "0 0 16px rgba(255, 215, 0, 0.35)",
               objectFit: "cover"
             }}
           />
         </div>
-        <h2 className={styles.title}>{isLogin ? "Member Sign In" : "Register Permanent Account"}</h2>
-        <p style={{ fontSize: "0.8rem", color: "var(--color-text-secondary)", textAlign: "center", marginTop: "-0.5rem", marginBottom: "0.5rem" }}>
+        <h2 className={styles.title}>{isLogin ? "Member Sign In" : "Register Protected Account"}</h2>
+        <p style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)", textAlign: "center", marginTop: "-0.4rem", marginBottom: "0.6rem" }}>
           {isLogin
             ? "Access your cloud balance, VIP rakeback vault & tournament positions"
-            : `Convert your anonymous session and transfer ${balance.toLocaleString()} $ War Bonds to VPS MongoDB`}
+            : `Create an account to claim your 1,000 $ War Bonds welcome bonus!`}
         </p>
+
+        {!isLogin && (
+          <div style={{
+            background: "rgba(0, 240, 255, 0.06)",
+            border: "1px solid rgba(0, 240, 255, 0.25)",
+            borderRadius: "6px",
+            padding: "0.6rem 0.8rem",
+            marginBottom: "0.75rem",
+            fontSize: "0.74rem",
+            lineHeight: 1.4,
+            color: "var(--color-text-secondary)"
+          }}>
+            <div style={{ color: "var(--color-primary)", fontWeight: 800, marginBottom: "0.2rem" }}>
+              🔒 100% Privacy Guarantee & Security:
+            </div>
+            <div>• Your Roblox & Discord handles are <strong>encrypted and hidden</strong> — they will NEVER be shown anywhere on public leaderboards or chat.</div>
+            <div style={{ marginTop: "0.2rem", color: "#ffd700" }}>
+              💡 <strong>Tip:</strong> Choose a site username different from your Discord name for complete anonymity.
+            </div>
+          </div>
+        )}
         
         <form className={styles.form} onSubmit={handleSubmit}>
           {errorMsg && <div className={styles.error}>{errorMsg}</div>}
 
           <div className={styles.inputGroup}>
-            <label className={styles.label}>Username</label>
+            <label className={styles.label}>Site Username (Public Persona)</label>
             <input
               id="input-auth-username"
               type="text"
@@ -139,12 +159,14 @@ export const AuthModal: React.FC = () => {
           {!isLogin && (
             <>
               <div className={styles.inputGroup}>
-                <label className={styles.label}>Discord Username</label>
+                <label className={styles.label}>
+                  Discord Username <span style={{ color: "#00f0ff", fontSize: "0.7rem" }}>(Private • For Verification)</span>
+                </label>
                 <input
                   id="input-auth-discord"
                   type="text"
                   className={styles.inputBox}
-                  placeholder="e.g. kaiser#1337"
+                  placeholder="e.g. your_discord_handle"
                   value={discord}
                   onChange={(e) => setDiscord(e.target.value)}
                   required
@@ -153,12 +175,14 @@ export const AuthModal: React.FC = () => {
               </div>
 
               <div className={styles.inputGroup}>
-                <label className={styles.label}>Roblox Username</label>
+                <label className={styles.label}>
+                  Roblox Username <span style={{ color: "#00f0ff", fontSize: "0.7rem" }}>(Private • Hidden)</span>
+                </label>
                 <input
                   id="input-auth-roblox"
                   type="text"
                   className={styles.inputBox}
-                  placeholder="e.g. TrenchRaider"
+                  placeholder="e.g. RobloxPlayer123"
                   value={roblox}
                   onChange={(e) => setRoblox(e.target.value)}
                   required
@@ -182,13 +206,27 @@ export const AuthModal: React.FC = () => {
             />
           </div>
 
+          {!isLogin && (
+            <div style={{
+              background: "rgba(255, 170, 0, 0.08)",
+              border: "1px dashed rgba(255, 170, 0, 0.4)",
+              borderRadius: "6px",
+              padding: "0.55rem 0.75rem",
+              fontSize: "0.72rem",
+              color: "#ffaa00",
+              lineHeight: 1.35
+            }}>
+              ⚠️ <strong>Verification Notice:</strong> Newly registered accounts are initially unverified. To get verified, message <strong>hangugeoreulgusahalsu</strong> on Discord with a screenshot of your profile.
+            </div>
+          )}
+
           <button id="btn-auth-submit" className={styles.submitBtn} type="submit" disabled={loading}>
-            {loading ? "Authenticating..." : isLogin ? "Sign In to Account" : "Register & Save Progress"}
+            {loading ? "Authenticating..." : isLogin ? "Sign In to Account" : "Register & Get 1,000 $ Bonus"}
           </button>
         </form>
 
         <div className={styles.toggleLink}>
-          {isLogin ? "Playing anonymously?" : "Already registered?"}
+          {isLogin ? "Need a new account?" : "Already registered?"}
           <span 
             id="link-auth-toggle"
             className={styles.toggleAction}
@@ -197,11 +235,11 @@ export const AuthModal: React.FC = () => {
               setErrorMsg(null);
             }}
           >
-            {isLogin ? "Create Account & Transfer Balance" : "Sign In"}
+            {isLogin ? "Create Account" : "Sign In"}
           </span>
         </div>
 
-        <div style={{ marginTop: "1rem", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "0.75rem", display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
+        <div style={{ marginTop: "0.75rem", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "0.6rem", display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
           <button
             type="button"
             onClick={() => setIsAuthOpen(false)}

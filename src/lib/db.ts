@@ -10,6 +10,7 @@ export interface DBUser {
   balance: number;
   role: "admin" | "user";
   isGuest: boolean;
+  isVerified?: boolean;
   isBanned?: boolean;
   preferences?: {
     avatar?: string;
@@ -56,6 +57,7 @@ const defaultAdminUser: DBUser = {
   balance: 100000,
   role: "admin",
   isGuest: false,
+  isVerified: true,
   inventory: [
     { id: "skin_init_1", name: "AWP | Dragon Lore", rarity: "exotic", value: 2800, color: "#ffaa00" }
   ],

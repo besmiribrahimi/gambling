@@ -61,6 +61,7 @@ export interface UserProfile {
   discord?: string;
   roblox?: string;
   isGuest?: boolean;
+  isVerified?: boolean;
 }
 
 interface WalletContextType {
@@ -223,7 +224,8 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             role: data.user.role || "user",
             discord: data.user.discord,
             roblox: data.user.roblox,
-            isGuest: false
+            isGuest: false,
+            isVerified: !!data.user.isVerified
           });
           setBalance(data.user.balance ?? 1000);
           setInventory(data.user.inventory || []);
@@ -292,14 +294,15 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [balance, inventory, wagerHistory, matches, lastClaimTime, dailyStreak, rakebackBalance, isLoaded, user]);
 
-  const loginUser = (userData: { id: string; username: string; role?: "admin" | "user"; discord?: string; roblox?: string; isGuest?: boolean; balance: number; inventory?: Skin[]; history?: Wager[]; lastClaimTime?: number | null }) => {
+  const loginUser = (userData: { id: string; username: string; role?: "admin" | "user"; discord?: string; roblox?: string; isGuest?: boolean; isVerified?: boolean; balance: number; inventory?: Skin[]; history?: Wager[]; lastClaimTime?: number | null }) => {
     setUser({
       id: userData.id,
       username: userData.username,
       role: userData.role || "user",
       discord: userData.discord,
       roblox: userData.roblox,
-      isGuest: userData.isGuest || false
+      isGuest: userData.isGuest || false,
+      isVerified: userData.isVerified || false
     });
     setBalance(userData.balance ?? 1000);
     setInventory(userData.inventory || []);

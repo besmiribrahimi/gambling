@@ -12,6 +12,7 @@ interface AdminUserData {
   roblox?: string;
   balance: number;
   role?: "admin" | "user";
+  isVerified?: boolean;
   isBanned?: boolean;
   createdAt?: string;
 }
@@ -20,6 +21,7 @@ export const AdminModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
   const { user, matches, resolveMatch } = useWallet();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [activeTab, setActiveTab] = useState<"metrics" | "users" | "matches" | "broadcast">("metrics");
+  const [rosterFilter, setRosterFilter] = useState<"all" | "pending" | "verified">("all");
 
   // Admin login form state
   const [adminUsername, setAdminUsername] = useState("admin");
@@ -142,6 +144,33 @@ export const AdminModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
     }
   };
 
+  const handleToggleVerification = async (targetId: string, currentVerification: boolean) => {
+    try {
+      const res = await fetch("/api/admin/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "toggle-verification",
+          userId: targetId,
+          isVerified: !currentVerification
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update verification status.");
+
+      setMsg({
+        text: `Player ${targetId} marked as ${!currentVerification ? "VERIFIED ✅" : "UNVERIFIED ⚠️"}!`,
+        isError: false
+      });
+      fetchUsers();
+      sound.playWin();
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Error.";
+      setMsg({ text: errorMsg, isError: true });
+    }
+  };
+
   const handleToggleBan = async (targetId: string, currentBan: boolean) => {
     try {
       const res = await fetch("/api/admin/action", {
@@ -191,23 +220,31 @@ export const AdminModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
     }
   };
 
+  const pendingCount = users.filter((u) => !u.isVerified && u.role !== "admin").length;
+  const verifiedCount = users.filter((u) => u.isVerified || u.role === "admin").length;
+
   const filteredUsers = users.filter((u) => {
+    // Filter by verification status
+    if (rosterFilter === "pending" && (u.isVerified || u.role === "admin")) return false;
+    if (rosterFilter === "verified" && (!u.isVerified && u.role !== "admin")) return false;
+
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
       u.username.toLowerCase().includes(q) ||
       u.id.toLowerCase().includes(q) ||
-      (u.discord && u.discord.toLowerCase().includes(q))
+      (u.discord && u.discord.toLowerCase().includes(q)) ||
+      (u.roblox && u.roblox.toLowerCase().includes(q))
     );
   });
 
   return (
     <div className={styles.overlay}>
-      <div className={styles.modal}>
+      <div className={styles.modal} style={{ maxWidth: "980px" }}>
         {/* Header */}
         <div className={styles.modalHeader}>
           <div className={styles.headerTitle}>
-            <span>⚡</span> CLASHWAGER ADMIN COMMAND CENTER
+            <span>⚡</span> WARWAGER ADMIN COMMAND CENTER
           </div>
           <button className={styles.closeBtn} onClick={onClose}>
             ✕
@@ -334,7 +371,7 @@ export const AdminModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
                   className={`${styles.tabBtn} ${activeTab === "users" ? styles.tabBtnActive : ""}`}
                   onClick={() => { setActiveTab("users"); sound.playClick(); }}
                 >
-                  👥 Player Roster ({users.length})
+                  👥 Player Roster ({users.length}) {pendingCount > 0 && <span style={{ background: "#ffaa00", color: "#000", padding: "0.1rem 0.4rem", borderRadius: "8px", fontSize: "0.65rem", fontWeight: 900 }}>{pendingCount} PENDING</span>}
                 </button>
                 <button
                   className={`${styles.tabBtn} ${activeTab === "matches" ? styles.tabBtnActive : ""}`}
@@ -368,6 +405,10 @@ export const AdminModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
                       <span className={styles.statLabel}>Total Registered Players</span>
                       <span className={styles.statVal}>{users.length}</span>
                     </div>
+                    <div className={styles.statCard} style={{ borderColor: "rgba(255, 170, 0, 0.4)" }}>
+                      <span className={styles.statLabel} style={{ color: "#ffaa00" }}>Pending Discord Verification</span>
+                      <span className={styles.statVal} style={{ color: "#ffaa00" }}>{pendingCount}</span>
+                    </div>
                     <div className={styles.statCard}>
                       <span className={styles.statLabel}>Circulating War Bonds</span>
                       <span className={styles.statVal} style={{ color: "#ffd700" }}>
@@ -380,12 +421,15 @@ export const AdminModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
                         {matches.length}
                       </span>
                     </div>
-                    <div className={styles.statCard}>
-                      <span className={styles.statLabel}>Banned Users</span>
-                      <span className={styles.statVal} style={{ color: "#ff0055" }}>
-                        {users.filter((u) => u.isBanned).length}
-                      </span>
-                    </div>
+                  </div>
+
+                  <div style={{ marginTop: "1.5rem", background: "rgba(0, 240, 255, 0.05)", border: "1px solid rgba(0, 240, 255, 0.2)", borderRadius: "8px", padding: "1.2rem" }}>
+                    <h4 style={{ color: "var(--color-primary)", margin: "0 0 0.5rem 0", fontSize: "0.95rem" }}>
+                      🛡️ Discord Verification Overseer Protocol:
+                    </h4>
+                    <p style={{ fontSize: "0.8rem", color: "var(--color-text-secondary)", margin: 0, lineHeight: 1.5 }}>
+                      When users register, they are advised to message <strong>hangugeoreulgusahalsu</strong> on Discord with a screenshot of their profile. Use the <strong>Player Roster</strong> tab below to cross-reference their private Discord/Roblox handles and click <strong>Verify ✅</strong> to grant verified member status.
+                    </p>
                   </div>
                 </div>
               )}
@@ -393,30 +437,83 @@ export const AdminModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
               {/* Tab 2: Users Management Roster */}
               {activeTab === "users" && (
                 <div>
-                  <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1rem" }}>
-                    <input
-                      type="text"
-                      className={styles.searchInput}
-                      placeholder="Search player by username or ID..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    <button
-                      onClick={fetchUsers}
-                      style={{ background: "rgba(0, 240, 255, 0.1)", border: "1px solid rgba(0, 240, 255, 0.3)", color: "var(--color-primary)", borderRadius: "6px", padding: "0 1rem", fontWeight: 800, cursor: "pointer" }}
-                    >
-                      🔄 Refresh Roster
-                    </button>
+                  {/* Search and Subfilters */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1rem" }}>
+                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <button
+                        onClick={() => setRosterFilter("all")}
+                        style={{
+                          padding: "0.4rem 0.8rem",
+                          borderRadius: "4px",
+                          fontSize: "0.75rem",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                          background: rosterFilter === "all" ? "var(--color-primary)" : "rgba(255,255,255,0.06)",
+                          color: rosterFilter === "all" ? "#000" : "#fff",
+                          border: "none"
+                        }}
+                      >
+                        All ({users.length})
+                      </button>
+                      <button
+                        onClick={() => setRosterFilter("pending")}
+                        style={{
+                          padding: "0.4rem 0.8rem",
+                          borderRadius: "4px",
+                          fontSize: "0.75rem",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                          background: rosterFilter === "pending" ? "#ffaa00" : "rgba(255, 170, 0, 0.1)",
+                          color: rosterFilter === "pending" ? "#000" : "#ffaa00",
+                          border: "1px solid rgba(255, 170, 0, 0.3)"
+                        }}
+                      >
+                        ⚠️ Pending Verification ({pendingCount})
+                      </button>
+                      <button
+                        onClick={() => setRosterFilter("verified")}
+                        style={{
+                          padding: "0.4rem 0.8rem",
+                          borderRadius: "4px",
+                          fontSize: "0.75rem",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                          background: rosterFilter === "verified" ? "var(--color-success)" : "rgba(0, 230, 118, 0.1)",
+                          color: rosterFilter === "verified" ? "#000" : "var(--color-success)",
+                          border: "1px solid rgba(0, 230, 118, 0.3)"
+                        }}
+                      >
+                        🛡️ Verified ({verifiedCount})
+                      </button>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <input
+                        type="text"
+                        className={styles.searchInput}
+                        placeholder="Search player, discord, roblox..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        style={{ minWidth: "220px" }}
+                      />
+                      <button
+                        onClick={fetchUsers}
+                        style={{ background: "rgba(0, 240, 255, 0.1)", border: "1px solid rgba(0, 240, 255, 0.3)", color: "var(--color-primary)", borderRadius: "6px", padding: "0 0.8rem", fontWeight: 800, cursor: "pointer" }}
+                      >
+                        🔄
+                      </button>
+                    </div>
                   </div>
 
                   <div style={{ overflowX: "auto" }}>
                     <table className={styles.userTable}>
                       <thead>
                         <tr>
-                          <th>User & Role</th>
-                          <th>Discord / Roblox</th>
+                          <th>Player & Role</th>
+                          <th>Private Discord / Roblox</th>
                           <th>Balance</th>
-                          <th>Status</th>
+                          <th>Verification</th>
+                          <th>Account</th>
                           <th style={{ textAlign: "right" }}>Actions</th>
                         </tr>
                       </thead>
@@ -438,8 +535,13 @@ export const AdminModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
                                 {u.id}
                               </span>
                             </td>
-                            <td style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>
-                              {u.discord || "—"} / {u.roblox || "—"}
+                            <td>
+                              <div style={{ fontSize: "0.75rem", color: "#00f0ff", fontWeight: 700 }}>
+                                💬 {u.discord || "Not set"}
+                              </div>
+                              <div style={{ fontSize: "0.7rem", color: "var(--color-text-secondary)" }}>
+                                🎮 {u.roblox || "Not set"}
+                              </div>
                             </td>
                             <td style={{ fontWeight: 800, color: "var(--color-primary)" }}>
                               {selectedUserId === u.id ? (
@@ -466,13 +568,43 @@ export const AdminModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
                               <span style={{
                                 fontSize: "0.7rem",
                                 fontWeight: 800,
+                                padding: "0.15rem 0.4rem",
+                                borderRadius: "4px",
+                                background: u.isVerified || u.role === "admin" ? "rgba(0, 230, 118, 0.15)" : "rgba(255, 170, 0, 0.15)",
+                                color: u.isVerified || u.role === "admin" ? "var(--color-success)" : "#ffaa00",
+                                border: `1px solid ${u.isVerified || u.role === "admin" ? "var(--color-success)" : "#ffaa00"}`
+                              }}>
+                                {u.isVerified || u.role === "admin" ? "🛡️ VERIFIED" : "⚠️ UNVERIFIED"}
+                              </span>
+                            </td>
+                            <td>
+                              <span style={{
+                                fontSize: "0.7rem",
+                                fontWeight: 800,
                                 color: u.isBanned ? "var(--color-danger)" : "var(--color-success)"
                               }}>
                                 {u.isBanned ? "🚫 BANNED" : "🟢 ACTIVE"}
                               </span>
                             </td>
                             <td style={{ textAlign: "right" }}>
-                              <div style={{ display: "flex", gap: "0.4rem", justifyContent: "flex-end" }}>
+                              <div style={{ display: "flex", gap: "0.35rem", justifyContent: "flex-end" }}>
+                                {u.role !== "admin" && (
+                                  <button
+                                    onClick={() => handleToggleVerification(u.id, !!u.isVerified)}
+                                    style={{
+                                      background: u.isVerified ? "rgba(255, 170, 0, 0.15)" : "rgba(0, 230, 118, 0.2)",
+                                      border: `1px solid ${u.isVerified ? "#ffaa00" : "var(--color-success)"}`,
+                                      color: u.isVerified ? "#ffaa00" : "var(--color-success)",
+                                      borderRadius: "4px",
+                                      padding: "0.25rem 0.5rem",
+                                      fontSize: "0.72rem",
+                                      fontWeight: 800,
+                                      cursor: "pointer"
+                                    }}
+                                  >
+                                    {u.isVerified ? "Unverify" : "Verify ✅"}
+                                  </button>
+                                )}
                                 <button
                                   className={styles.actionBtn}
                                   onClick={() => {

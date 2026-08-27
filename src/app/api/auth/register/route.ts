@@ -85,6 +85,7 @@ export async function POST(request: Request) {
       balance: startingBalance,
       role: "user",
       isGuest: false,
+      isVerified: false,
       inventory: initialInventory,
       history: initialHistory,
       lastClaimTime: null,
