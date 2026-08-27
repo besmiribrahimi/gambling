@@ -58,7 +58,19 @@ export const Navbar: React.FC = () => {
       <nav className={styles.navbar}>
         {/* Left Section: Logo & Quick Links */}
         <div className={styles.logoSection}>
-          <span className={`${styles.logo} color-shifter`}>CLASHWAGER</span>
+          <img
+            src="/logo.png"
+            alt="WarWager Casino Logo"
+            style={{
+              width: "38px",
+              height: "38px",
+              borderRadius: "8px",
+              border: "1.5px solid rgba(255, 215, 0, 0.5)",
+              boxShadow: "0 0 12px rgba(255, 215, 0, 0.35)",
+              objectFit: "cover"
+            }}
+          />
+          <span className={`${styles.logo} color-shifter`}>WARWAGER</span>
           <span className={`${styles.logoDot} blink-fast`} />
           
           <button

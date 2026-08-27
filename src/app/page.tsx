@@ -133,14 +133,25 @@ function DashboardContent() {
             gap: "1rem",
             boxShadow: "0 0 25px rgba(255, 215, 0, 0.12)"
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
-              <span style={{ fontSize: "2rem" }}>🎁</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+              <img
+                src="/logo.png"
+                alt="WarWager Official Logo"
+                style={{
+                  width: "52px",
+                  height: "52px",
+                  borderRadius: "10px",
+                  border: "1.5px solid rgba(255, 215, 0, 0.6)",
+                  boxShadow: "0 0 15px rgba(255, 215, 0, 0.35)",
+                  objectFit: "cover"
+                }}
+              />
               <div>
                 <h3 style={{ fontFamily: "var(--font-family-title)", fontSize: "1.05rem", fontWeight: 800, color: "#ffd700", margin: 0 }}>
-                  GUEST PREVIEW MODE — UNLOCK REAL BETTING
+                  WARWAGER GUEST PREVIEW — UNLOCK 1,000 $ BONUS
                 </h3>
                 <p style={{ fontSize: "0.82rem", color: "var(--color-text-secondary)", marginTop: "0.25rem", margin: 0 }}>
-                  Create a free permanent account in 10 seconds to unlock all 8 games and get your <strong style={{ color: "#fff" }}>1,000 $ War Bonds</strong> starting bonus!
+                  Create a free permanent account in 10 seconds to unlock all 8 casino games and claim your <strong style={{ color: "#fff" }}>1,000 $ War Bonds</strong> starting bonus!
                 </p>
               </div>
             </div>

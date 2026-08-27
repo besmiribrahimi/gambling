@@ -98,6 +98,20 @@ export const AuthModal: React.FC = () => {
   return (
     <div id="modal-auth" className={styles.overlay}>
       <div className={styles.modal}>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: "0.6rem" }}>
+          <img
+            src="/logo.png"
+            alt="WarWager Logo"
+            style={{
+              width: "68px",
+              height: "68px",
+              borderRadius: "14px",
+              border: "2px solid rgba(255, 215, 0, 0.6)",
+              boxShadow: "0 0 20px rgba(255, 215, 0, 0.35)",
+              objectFit: "cover"
+            }}
+          />
+        </div>
         <h2 className={styles.title}>{isLogin ? "Member Sign In" : "Register Permanent Account"}</h2>
         <p style={{ fontSize: "0.8rem", color: "var(--color-text-secondary)", textAlign: "center", marginTop: "-0.5rem", marginBottom: "0.5rem" }}>
           {isLogin
