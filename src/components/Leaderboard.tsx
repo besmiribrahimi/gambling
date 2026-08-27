@@ -1,71 +1,68 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useWallet } from "../context/WalletContext";
 import sound from "../lib/sound";
 import styles from "./leaderboard.module.css";
 
-interface LeaderboardEntry {
+interface RealPlayerEntry {
+  id: string;
   name: string;
+  avatar: string;
   vipTier: string;
   vipBadge: string;
   balance: number;
   wagersWon: number;
   biggestMultiplier: number;
+  totalWagered: number;
+  isBanned?: boolean;
+  role?: string;
   isUser?: boolean;
 }
 
-const MOCK_PLAYERS: LeaderboardEntry[] = [
-  { name: "shroud", vipTier: "Obsidian", vipBadge: "🔥", balance: 42500, wagersWon: 142, biggestMultiplier: 125.0 },
-  { name: "Faker", vipTier: "Diamond", vipBadge: "👑", balance: 28950, wagersWon: 118, biggestMultiplier: 76.0 },
-  { name: "s1mple", vipTier: "Platinum", vipBadge: "💎", balance: 18400, wagersWon: 85, biggestMultiplier: 42.0 },
-  { name: "TenZ", vipTier: "Platinum", vipBadge: "💎", balance: 14100, wagersWon: 62, biggestMultiplier: 33.0 },
-  { name: "Clix", vipTier: "Gold", vipBadge: "🥇", balance: 8500, wagersWon: 45, biggestMultiplier: 22.0 },
-  { name: "Mongraal", vipTier: "Gold", vipBadge: "🥇", balance: 5800, wagersWon: 31, biggestMultiplier: 18.0 },
-  { name: "Pokimane", vipTier: "Silver", vipBadge: "🥈", balance: 2950, wagersWon: 19, biggestMultiplier: 14.0 },
-  { name: "Ninja", vipTier: "Bronze", vipBadge: "🥉", balance: 1500, wagersWon: 12, biggestMultiplier: 6.0 }
-];
-
 export const Leaderboard: React.FC = () => {
-  const { balance, wagerHistory, user, vipTier } = useWallet();
+  const { user } = useWallet();
+  const [players, setPlayers] = useState<RealPlayerEntry[]>([]);
   const [sortKey, setSortKey] = useState<"balance" | "wagersWon" | "biggestMultiplier">("balance");
+  const [loading, setLoading] = useState(true);
 
-  // Calculate user stats
-  const playerWins = wagerHistory.filter((w) => w.result === "win").length;
-  const playerBiggestMult = wagerHistory.reduce((max, w) => {
-    if (w.result === "win" && w.amount > 0) {
-      const m = w.payout / w.amount;
-      return m > max ? m : max;
+  const fetchLeaderboard = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/leaderboard");
+      if (res.ok) {
+        const data = await res.json();
+        setPlayers(data.leaderboard || []);
+      }
+    } catch (e) {
+      console.error("Failed to fetch leaderboard:", e);
+    } finally {
+      setLoading(false);
     }
-    return max;
-  }, 1.0);
+  };
 
-  const userName = user ? user.username : "You (Player)";
+  useEffect(() => {
+    fetchLeaderboard();
+  }, []);
 
-  const leaderboardData: LeaderboardEntry[] = [
-    ...MOCK_PLAYERS,
-    {
-      name: userName,
-      vipTier: vipTier.name,
-      vipBadge: vipTier.badge,
-      balance,
-      wagersWon: playerWins,
-      biggestMultiplier: parseFloat(playerBiggestMult.toFixed(1)),
-      isUser: true
-    }
-  ];
-
-  leaderboardData.sort((a, b) => b[sortKey] - a[sortKey]);
+  const sortedData = [...players]
+    .map((p) => ({
+      ...p,
+      isUser: user ? p.name.toLowerCase() === user.username.toLowerCase() : false
+    }))
+    .sort((a, b) => b[sortKey] - a[sortKey]);
 
   return (
     <div className={styles.container}>
       <div className={styles.titleRow}>
         <div>
           <h2 className={styles.title}>🏆 Community Hall of Fame</h2>
-          <span className={styles.subtitle}>Rankings update in real-time based on high-roller performances</span>
+          <span className={styles.subtitle}>
+            Verified player rankings synchronized live from the MongoDB Cloud Database
+          </span>
         </div>
 
-        <div style={{ display: "flex", gap: "0.4rem" }}>
+        <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", alignItems: "center" }}>
           <button
             onClick={() => { setSortKey("balance"); sound.playClick(); }}
             style={{
@@ -75,7 +72,9 @@ export const Leaderboard: React.FC = () => {
               fontSize: "0.75rem",
               fontWeight: 800,
               background: sortKey === "balance" ? "var(--color-primary)" : "rgba(255,255,255,0.05)",
-              color: sortKey === "balance" ? "#000" : "#fff"
+              color: sortKey === "balance" ? "#000" : "#fff",
+              border: "1px solid rgba(255,255,255,0.1)",
+              cursor: "pointer"
             }}
           >
             Highest Balance
@@ -89,7 +88,9 @@ export const Leaderboard: React.FC = () => {
               fontSize: "0.75rem",
               fontWeight: 800,
               background: sortKey === "wagersWon" ? "var(--color-primary)" : "rgba(255,255,255,0.05)",
-              color: sortKey === "wagersWon" ? "#000" : "#fff"
+              color: sortKey === "wagersWon" ? "#000" : "#fff",
+              border: "1px solid rgba(255,255,255,0.1)",
+              cursor: "pointer"
             }}
           >
             Most Wins
@@ -103,10 +104,27 @@ export const Leaderboard: React.FC = () => {
               fontSize: "0.75rem",
               fontWeight: 800,
               background: sortKey === "biggestMultiplier" ? "var(--color-primary)" : "rgba(255,255,255,0.05)",
-              color: sortKey === "biggestMultiplier" ? "#000" : "#fff"
+              color: sortKey === "biggestMultiplier" ? "#000" : "#fff",
+              border: "1px solid rgba(255,255,255,0.1)",
+              cursor: "pointer"
             }}
           >
             Top Multiplier
+          </button>
+          <button
+            onClick={fetchLeaderboard}
+            title="Refresh Leaderboard"
+            style={{
+              padding: "0.4rem 0.6rem",
+              borderRadius: "6px",
+              background: "rgba(0, 240, 255, 0.1)",
+              border: "1px solid rgba(0, 240, 255, 0.3)",
+              color: "var(--color-primary)",
+              cursor: "pointer",
+              fontSize: "0.8rem"
+            }}
+          >
+            🔄
           </button>
         </div>
       </div>
@@ -115,14 +133,14 @@ export const Leaderboard: React.FC = () => {
         <thead>
           <tr>
             <th>Rank</th>
-            <th>Player & VIP Tier</th>
+            <th>Verified Player</th>
             <th>Wagers Won</th>
             <th>Top Multiplier</th>
             <th style={{ textAlign: "right" }}>War Bonds Balance</th>
           </tr>
         </thead>
         <tbody>
-          {leaderboardData.map((player, index) => {
+          {sortedData.map((player, index) => {
             const rank = index + 1;
             let rankClass = styles.rankOther;
             if (rank === 1) rankClass = styles.rank1;
@@ -131,7 +149,7 @@ export const Leaderboard: React.FC = () => {
 
             return (
               <tr 
-                key={player.name} 
+                key={player.id || player.name} 
                 className={`${styles.row} ${player.isUser ? styles.userRow : ""}`}
               >
                 <td>
@@ -141,9 +159,16 @@ export const Leaderboard: React.FC = () => {
                 </td>
                 <td>
                   <div className={styles.playerName}>
-                    <span>{player.vipBadge}</span>
-                    <span>{player.name}</span>
-                    <span style={{ fontSize: "0.68rem", color: "var(--color-text-muted)" }}>({player.vipTier})</span>
+                    <span style={{ fontSize: "1.1rem" }}>{player.avatar}</span>
+                    <span style={{ fontWeight: 800 }}>{player.name}</span>
+                    <span style={{ fontSize: "0.68rem", color: "var(--color-text-muted)" }}>
+                      ({player.vipBadge} {player.vipTier})
+                    </span>
+                    {player.role === "admin" && (
+                      <span style={{ fontSize: "0.6rem", padding: "0.1rem 0.35rem", borderRadius: "3px", background: "rgba(255,0,85,0.2)", color: "#ff0055", border: "1px solid #ff0055", fontWeight: 900 }}>
+                        ADMIN
+                      </span>
+                    )}
                     {player.isUser && <span className={styles.userTag}>YOU</span>}
                   </div>
                 </td>
@@ -159,6 +184,20 @@ export const Leaderboard: React.FC = () => {
               </tr>
             );
           })}
+          {sortedData.length === 0 && !loading && (
+            <tr>
+              <td colSpan={5} style={{ textAlign: "center", padding: "2.5rem", color: "var(--color-text-muted)" }}>
+                No players registered yet. Create an account to claim the #1 spot!
+              </td>
+            </tr>
+          )}
+          {loading && sortedData.length === 0 && (
+            <tr>
+              <td colSpan={5} style={{ textAlign: "center", padding: "2.5rem", color: "var(--color-text-muted)" }}>
+                Synchronizing live leaderboard rankings from MongoDB Atlas...
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>

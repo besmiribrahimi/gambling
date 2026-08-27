@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { findUserByUsername, saveUser, DBUser } from "../../../../lib/db";
+import { findUserByUsername, createUser, DBUser } from "../../../../lib/db";
 import { hashPassword, encryptSession } from "../../../../lib/auth";
 
 export async function POST(request: Request) {
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
       createdAt: new Date().toISOString()
     };
 
-    await saveUser(newUser);
+    await createUser(newUser);
 
     // Set secure session cookie
     const token = encryptSession(userId);

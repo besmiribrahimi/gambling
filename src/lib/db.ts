@@ -1,17 +1,5 @@
 import { MongoClient, Db } from "mongodb";
-import { hashPassword } from "./auth";
-
-export interface UserPreferences {
-  avatar?: string;
-  bio?: string;
-  soundVolume?: number;
-  soundMuted?: boolean;
-  highPerformanceMode?: boolean;
-  oddsFormat?: "decimal" | "american" | "fractional";
-  defaultBetPresets?: number[];
-  dailyWagerLimit?: number | null;
-  dailyLossLimit?: number | null;
-}
+import crypto from "crypto";
 
 export interface DBUser {
   id: string;
@@ -21,9 +9,15 @@ export interface DBUser {
   passwordHash: string;
   balance: number;
   role: "admin" | "user";
-  isGuest?: boolean;
+  isGuest: boolean;
   isBanned?: boolean;
-  preferences?: UserPreferences;
+  preferences?: {
+    avatar?: string;
+    bio?: string;
+    oddsFormat?: "decimal" | "american" | "fractional";
+    masterVolume?: number;
+    dailyWagerLimit?: number;
+  };
   inventory: Array<{
     id: string;
     name: string;
@@ -46,10 +40,13 @@ export interface DBUser {
   lastLoginAt?: string;
 }
 
-// In-Memory fallback store if MongoDB URI is not configured yet or VPS database is offline
+// In-Memory fallback store if MongoDB URI is not configured or offline
 const inMemoryUsers: Map<string, DBUser> = new Map();
 
-// Seed initial default admin into in-memory store
+export function hashPassword(password: string): string {
+  return crypto.createHash("sha256").update(password).digest("hex");
+}
+
 const defaultAdminUser: DBUser = {
   id: "admin_root_001",
   username: "admin",
@@ -59,8 +56,20 @@ const defaultAdminUser: DBUser = {
   balance: 100000,
   role: "admin",
   isGuest: false,
-  inventory: [],
-  history: [],
+  inventory: [
+    { id: "skin_init_1", name: "AWP | Dragon Lore", rarity: "exotic", value: 2800, color: "#ffaa00" }
+  ],
+  history: [
+    {
+      id: "tx_init_001",
+      type: "bet",
+      description: "Admin Master Vault Genesis Credit",
+      amount: 0,
+      result: "win",
+      payout: 100000,
+      date: new Date().toLocaleTimeString() + " " + new Date().toLocaleDateString()
+    }
+  ],
   lastClaimTime: null,
   createdAt: new Date().toISOString(),
   preferences: {
@@ -70,50 +79,47 @@ const defaultAdminUser: DBUser = {
 };
 inMemoryUsers.set(defaultAdminUser.id, defaultAdminUser);
 
-const uri = process.env.MONGODB_URI;
+let cachedClient: MongoClient | null = null;
 
-let clientPromise: Promise<MongoClient> | null = null;
+export async function getMongoClient(): Promise<MongoClient | null> {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) return null;
 
-if (uri) {
-  if (process.env.NODE_ENV === "development") {
-    const globalWithMongo = global as typeof globalThis & {
-      _mongoClientPromise?: Promise<MongoClient>;
-    };
+  if (cachedClient) {
+    return cachedClient;
+  }
 
-    if (!globalWithMongo._mongoClientPromise) {
-      const client = new MongoClient(uri, {
-        serverSelectionTimeoutMS: 4000,
-        maxPoolSize: 15
-      });
-      globalWithMongo._mongoClientPromise = client.connect();
-    }
-    clientPromise = globalWithMongo._mongoClientPromise;
-  } else {
+  try {
     const client = new MongoClient(uri, {
       serverSelectionTimeoutMS: 5000,
       maxPoolSize: 20
     });
-    clientPromise = client.connect();
+    await client.connect();
+    cachedClient = client;
+    return client;
+  } catch (err) {
+    console.warn("MongoDB Atlas connection error, falling back to local vault:", err);
+    cachedClient = null;
+    return null;
   }
 }
 
 export async function getDatabase(): Promise<Db | null> {
-  if (!clientPromise) {
-    return null;
-  }
   try {
-    const conn = await clientPromise;
-    const db = conn.db("gambling");
-    
+    const client = await getMongoClient();
+    if (!client) return null;
+    const db = client.db("gambling");
+
     // Seed default admin in Mongo if not already created
-    const existingAdmin = await db.collection<DBUser>("users").findOne({ username: "admin" });
+    const usersCol = db.collection<DBUser>("users");
+    const existingAdmin = await usersCol.findOne({ username: "admin" });
     if (!existingAdmin) {
-      await db.collection<DBUser>("users").insertOne(defaultAdminUser);
+      await usersCol.insertOne(defaultAdminUser);
     }
 
     return db;
   } catch (err) {
-    console.warn("MongoDB connection to VPS failed, falling back to local vault:", err);
+    cachedClient = null;
     return null;
   }
 }
@@ -151,14 +157,13 @@ export async function findUserByUsername(username: string): Promise<DBUser | nul
       });
       if (user) return user;
     }
-  } catch (error) {
-    console.error("Database query failed:", error);
+  } catch (err) {
+    console.warn("Error finding user in Mongo, checking in-memory:", err);
   }
 
-  // Fallback to in-memory vault
-  for (const u of inMemoryUsers.values()) {
-    if (u.username.toLowerCase() === cleanName.toLowerCase()) {
-      return u;
+  for (const user of inMemoryUsers.values()) {
+    if (user.username.toLowerCase() === cleanName.toLowerCase()) {
+      return user;
     }
   }
   return null;
@@ -171,72 +176,64 @@ export async function findUserById(id: string): Promise<DBUser | null> {
       const user = await db.collection<DBUser>("users").findOne({ id });
       if (user) return user;
     }
-  } catch (error) {
-    console.error("Database query failed:", error);
+  } catch (err) {
+    console.warn("Error finding user by ID in Mongo, checking in-memory:", err);
   }
 
   return inMemoryUsers.get(id) || null;
 }
 
-export async function getAllUsers(): Promise<Omit<DBUser, "passwordHash">[]> {
+export async function createUser(user: DBUser): Promise<DBUser> {
   try {
     const db = await getDatabase();
     if (db) {
-      const users = await db.collection<DBUser>("users")
-        .find({}, { projection: { passwordHash: 0 } })
-        .toArray();
-      return users as unknown as Omit<DBUser, "passwordHash">[];
+      await db.collection<DBUser>("users").insertOne(user);
+      return user;
     }
-  } catch (error) {
-    console.error("Database getAllUsers query failed:", error);
+  } catch (err) {
+    console.warn("Error creating user in Mongo, falling back to in-memory:", err);
   }
 
-  // Fallback in-memory
-  const safeList: Omit<DBUser, "passwordHash">[] = [];
-  for (const u of inMemoryUsers.values()) {
-    const { passwordHash, ...safe } = u;
-    safeList.push(safe);
-  }
-  return safeList;
-}
-
-export async function saveUser(user: DBUser): Promise<boolean> {
   inMemoryUsers.set(user.id, user);
+  return user;
+}
+
+export async function updateUser(id: string, updates: Partial<DBUser>): Promise<DBUser | null> {
   try {
     const db = await getDatabase();
     if (db) {
-      const result = await db.collection<DBUser>("users").replaceOne(
-        { id: user.id },
-        user,
-        { upsert: true }
+      const result = await db.collection<DBUser>("users").findOneAndUpdate(
+        { id },
+        { $set: { ...updates, updatedAt: new Date().toISOString() } },
+        { returnDocument: "after" }
       );
-      return result.acknowledged;
+      if (result) return result;
     }
-    return true;
-  } catch (error) {
-    console.error("Failed to save user in MongoDB:", error);
-    return true; // Fallback succeeded
+  } catch (err) {
+    console.warn("Error updating user in Mongo, checking in-memory:", err);
   }
-}
 
-export async function updateUser(id: string, updateData: Partial<DBUser>): Promise<boolean> {
   const existing = inMemoryUsers.get(id);
   if (existing) {
-    inMemoryUsers.set(id, { ...existing, ...updateData, updatedAt: new Date().toISOString() });
+    const updated = { ...existing, ...updates, updatedAt: new Date().toISOString() };
+    inMemoryUsers.set(id, updated);
+    return updated;
   }
+  return null;
+}
 
+export async function getAllUsers(): Promise<DBUser[]> {
   try {
     const db = await getDatabase();
     if (db) {
-      const result = await db.collection<DBUser>("users").updateOne(
-        { id },
-        { $set: { ...updateData, updatedAt: new Date().toISOString() } }
-      );
-      return result.modifiedCount > 0 || result.matchedCount > 0;
+      return await db.collection<DBUser>("users").find({}).sort({ balance: -1 }).toArray();
     }
-    return existing !== undefined;
-  } catch (error) {
-    console.error("Failed to update user in MongoDB:", error);
-    return existing !== undefined;
+  } catch (err) {
+    console.warn("Error fetching all users in Mongo:", err);
   }
+
+  return Array.from(inMemoryUsers.values()).sort((a, b) => b.balance - a.balance);
 }
+
+export const saveUser = createUser;
+
