@@ -173,7 +173,16 @@ const DEFAULT_MATCHES: EsportsMatch[] = [
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
 export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("cw_user_cache");
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+    }
+    return null;
+  });
+
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
   const [isFairModalOpen, setIsFairModalOpen] = useState(false);
@@ -182,7 +191,21 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
   const [bigWinModal, setBigWinModal] = useState<BigWinPayload | null>(null);
 
-  const [balance, setBalance] = useState<number>(1000);
+  const [balance, setBalance] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("cw_user_cache");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && typeof parsed.balance === "number") return parsed.balance;
+        }
+        const stored = localStorage.getItem("cw_balance");
+        if (stored) return Number(stored);
+      } catch (e) {}
+    }
+    return 1000;
+  });
+
   const [inventory, setInventory] = useState<Skin[]>([]);
   const [wagerHistory, setWagerHistory] = useState<Wager[]>([]);
   const [matches, setMatches] = useState<EsportsMatch[]>(DEFAULT_MATCHES);
@@ -215,18 +238,6 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Load state on mount: Session check -> fallback to localStorage
   useEffect(() => {
-    // 1. Immediate client-side cache restoration to prevent refresh logout / flash
-    try {
-      const cached = localStorage.getItem("cw_user_cache");
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed && parsed.id) {
-          setUser(parsed);
-          if (parsed.balance !== undefined) setBalance(parsed.balance);
-        }
-      }
-    } catch (e) {}
-
     const fetchSession = async () => {
       try {
         const res = await fetch("/api/auth/me");
@@ -243,7 +254,9 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             isVerified: !!data.user.isVerified
           };
           setUser(freshUser);
-          localStorage.setItem("cw_user_cache", JSON.stringify(freshUser));
+          try {
+            localStorage.setItem("cw_user_cache", JSON.stringify({ ...freshUser, balance: data.user.balance }));
+          } catch (e) {}
           setBalance(data.user.balance ?? 1000);
           setInventory(data.user.inventory || []);
           setWagerHistory(data.user.history || []);
@@ -256,23 +269,22 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           const cached = localStorage.getItem("cw_user_cache");
           if (!cached) {
             setUser(null);
-          }
-          // Guest mode from localStorage
-          const storedBalance = localStorage.getItem("cw_balance");
-          const storedInventory = localStorage.getItem("cw_inventory");
-          const storedHistory = localStorage.getItem("cw_history");
-          const storedMatches = localStorage.getItem("cw_matches");
-          const storedClaim = localStorage.getItem("cw_last_claim");
-          const storedStreak = localStorage.getItem("cw_daily_streak");
-          const storedRakeback = localStorage.getItem("cw_rakeback");
+            const storedBalance = localStorage.getItem("cw_balance");
+            const storedInventory = localStorage.getItem("cw_inventory");
+            const storedHistory = localStorage.getItem("cw_history");
+            const storedMatches = localStorage.getItem("cw_matches");
+            const storedClaim = localStorage.getItem("cw_last_claim");
+            const storedStreak = localStorage.getItem("cw_daily_streak");
+            const storedRakeback = localStorage.getItem("cw_rakeback");
 
-          if (storedBalance !== null) setBalance(Number(storedBalance));
-          if (storedInventory !== null) setInventory(JSON.parse(storedInventory));
-          if (storedHistory !== null) setWagerHistory(JSON.parse(storedHistory));
-          if (storedMatches !== null) setMatches(JSON.parse(storedMatches));
-          if (storedClaim !== null) setLastClaimTime(Number(storedClaim));
-          if (storedStreak !== null) setDailyStreak(Number(storedStreak));
-          if (storedRakeback !== null) setRakebackBalance(Number(storedRakeback));
+            if (storedBalance !== null) setBalance(Number(storedBalance));
+            if (storedInventory !== null) setInventory(JSON.parse(storedInventory));
+            if (storedHistory !== null) setWagerHistory(JSON.parse(storedHistory));
+            if (storedMatches !== null) setMatches(JSON.parse(storedMatches));
+            if (storedClaim !== null) setLastClaimTime(Number(storedClaim));
+            if (storedStreak !== null) setDailyStreak(Number(storedStreak));
+            if (storedRakeback !== null) setRakebackBalance(Number(storedRakeback));
+          }
         }
       } catch (error) {
         console.error("Auth Me check failed:", error);
