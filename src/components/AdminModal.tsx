@@ -22,9 +22,12 @@ export const AdminModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
   const [activeTab, setActiveTab] = useState<"metrics" | "users" | "matches" | "broadcast">("metrics");
 
   // Admin login form state
+  const [adminUsername, setAdminUsername] = useState("admin");
+  const [adminPassword, setAdminPassword] = useState("");
   const [pass1, setPass1] = useState("super_long_admin_password_layer_one_987654321_clashwager");
   const [pass2, setPass2] = useState("super_long_admin_password_layer_two_123456789_clashwager");
   const [pass3, setPass3] = useState("macaj");
+  const [usePasscodes, setUsePasscodes] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
   // Admin Data state
@@ -39,7 +42,6 @@ export const AdminModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
   // Fetch admin check on open
   const checkAuth = useCallback(async () => {
     try {
-      // If currently logged in user has role === "admin", they are automatically authorized
       if (user?.role === "admin") {
         setIsAuthorized(true);
         fetchUsers();
@@ -84,10 +86,14 @@ export const AdminModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
     setAuthError(null);
 
     try {
+      const payload = usePasscodes
+        ? { pass1, pass2, pass3 }
+        : { username: adminUsername, password: adminPassword, pass1, pass2, pass3 };
+
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pass1, pass2, pass3 })
+        body: JSON.stringify(payload)
       });
 
       const data = await res.json();
@@ -176,7 +182,7 @@ export const AdminModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to change role.");
 
-      setMsg({ text: `User ${targetId} promoted to ${nextRole.toUpperCase()}!`, isError: false });
+      setMsg({ text: `User ${targetId} role updated to ${nextRole.toUpperCase()}!`, isError: false });
       fetchUsers();
       sound.playJackpot();
     } catch (err: unknown) {
@@ -218,7 +224,7 @@ export const AdminModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
                 Restricted Admin Access
               </h3>
               <p style={{ fontSize: "0.82rem", color: "var(--color-text-secondary)" }}>
-                Authenticate with multi-layer master passcodes to access VPS DB controls.
+                Sign in with your Overseer Credentials or Master Passcodes to manage MongoDB Atlas.
               </p>
 
               {authError && (
@@ -228,32 +234,70 @@ export const AdminModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
               )}
 
               <form onSubmit={handleAdminLogin} style={{ display: "flex", flexDirection: "column", gap: "0.75rem", textAlign: "left" }}>
-                <div>
-                  <label style={{ fontSize: "0.72rem", color: "var(--color-text-muted)", fontWeight: 800 }}>Master Passcode 1</label>
-                  <input
-                    type="password"
-                    value={pass1}
-                    onChange={(e) => setPass1(e.target.value)}
-                    style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "4px", padding: "0.5rem", color: "#fff", fontSize: "0.85rem" }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: "0.72rem", color: "var(--color-text-muted)", fontWeight: 800 }}>Master Passcode 2</label>
-                  <input
-                    type="password"
-                    value={pass2}
-                    onChange={(e) => setPass2(e.target.value)}
-                    style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "4px", padding: "0.5rem", color: "#fff", fontSize: "0.85rem" }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: "0.72rem", color: "var(--color-text-muted)", fontWeight: 800 }}>Security Layer PIN</label>
-                  <input
-                    type="password"
-                    value={pass3}
-                    onChange={(e) => setPass3(e.target.value)}
-                    style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "4px", padding: "0.5rem", color: "#fff", fontSize: "0.85rem" }}
-                  />
+                {!usePasscodes ? (
+                  <>
+                    <div>
+                      <label style={{ fontSize: "0.72rem", color: "var(--color-text-muted)", fontWeight: 800 }}>Admin Username</label>
+                      <input
+                        type="text"
+                        value={adminUsername}
+                        onChange={(e) => setAdminUsername(e.target.value)}
+                        placeholder="e.g. admin"
+                        required
+                        style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "4px", padding: "0.5rem", color: "#fff", fontSize: "0.85rem" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: "0.72rem", color: "var(--color-text-muted)", fontWeight: 800 }}>Admin Password PIN</label>
+                      <input
+                        type="password"
+                        value={adminPassword}
+                        onChange={(e) => setAdminPassword(e.target.value)}
+                        placeholder="Enter master password..."
+                        required
+                        style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "4px", padding: "0.5rem", color: "#fff", fontSize: "0.85rem" }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <label style={{ fontSize: "0.72rem", color: "var(--color-text-muted)", fontWeight: 800 }}>Master Passcode 1</label>
+                      <input
+                        type="password"
+                        value={pass1}
+                        onChange={(e) => setPass1(e.target.value)}
+                        style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "4px", padding: "0.5rem", color: "#fff", fontSize: "0.85rem" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: "0.72rem", color: "var(--color-text-muted)", fontWeight: 800 }}>Master Passcode 2</label>
+                      <input
+                        type="password"
+                        value={pass2}
+                        onChange={(e) => setPass2(e.target.value)}
+                        style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "4px", padding: "0.5rem", color: "#fff", fontSize: "0.85rem" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: "0.72rem", color: "var(--color-text-muted)", fontWeight: 800 }}>Security Layer PIN</label>
+                      <input
+                        type="password"
+                        value={pass3}
+                        onChange={(e) => setPass3(e.target.value)}
+                        style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "4px", padding: "0.5rem", color: "#fff", fontSize: "0.85rem" }}
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <span
+                    onClick={() => setUsePasscodes(!usePasscodes)}
+                    style={{ fontSize: "0.72rem", color: "#00f0ff", cursor: "pointer", textDecoration: "underline" }}
+                  >
+                    {usePasscodes ? "Use Username / Password instead" : "Use Secret Passcodes instead"}
+                  </span>
                 </div>
 
                 <button
@@ -271,118 +315,101 @@ export const AdminModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
                     cursor: "pointer"
                   }}
                 >
-                  {loading ? "Authenticating..." : "Authenticate as Overseer"}
+                  {loading ? "Authenticating..." : "Unlock Admin Command Center"}
                 </button>
               </form>
             </div>
           ) : (
             /* Authorized Admin Console */
             <>
-              {/* Tabs */}
-              <div className={styles.navTabs} style={{ padding: 0 }}>
+              {/* Top Navigation Tabs */}
+              <div className={styles.tabNav}>
                 <button
-                  className={`${styles.navTabBtn} ${activeTab === "metrics" ? styles.navTabActive : ""}`}
-                  onClick={() => setActiveTab("metrics")}
+                  className={`${styles.tabBtn} ${activeTab === "metrics" ? styles.tabBtnActive : ""}`}
+                  onClick={() => { setActiveTab("metrics"); sound.playClick(); }}
                 >
                   📊 Server Metrics
                 </button>
                 <button
-                  className={`${styles.navTabBtn} ${activeTab === "users" ? styles.navTabActive : ""}`}
-                  onClick={() => setActiveTab("users")}
+                  className={`${styles.tabBtn} ${activeTab === "users" ? styles.tabBtnActive : ""}`}
+                  onClick={() => { setActiveTab("users"); sound.playClick(); }}
                 >
                   👥 Player Roster ({users.length})
                 </button>
                 <button
-                  className={`${styles.navTabBtn} ${activeTab === "matches" ? styles.navTabActive : ""}`}
-                  onClick={() => setActiveTab("matches")}
+                  className={`${styles.tabBtn} ${activeTab === "matches" ? styles.tabBtnActive : ""}`}
+                  onClick={() => { setActiveTab("matches"); sound.playClick(); }}
                 >
-                  🎯 Settle Esports ({matches.length})
+                  🎯 Settle Esports ({matches.filter((m) => m.status === "live").length})
                 </button>
               </div>
 
+              {/* Status Message Alert */}
               {msg && (
-                <div
-                  style={{
-                    padding: "0.6rem 1rem",
-                    borderRadius: "6px",
-                    background: msg.isError ? "rgba(255,23,68,0.2)" : "rgba(0,230,118,0.2)",
-                    border: `1px solid ${msg.isError ? "var(--color-danger)" : "var(--color-success)"}`,
-                    color: msg.isError ? "var(--color-danger)" : "var(--color-success)",
-                    fontWeight: 700,
-                    fontSize: "0.85rem",
-                    textAlign: "center"
-                  }}
-                >
+                <div style={{
+                  padding: "0.6rem 1rem",
+                  marginBottom: "1rem",
+                  borderRadius: "6px",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  background: msg.isError ? "rgba(255,23,68,0.15)" : "rgba(0,230,118,0.15)",
+                  border: `1px solid ${msg.isError ? "var(--color-danger)" : "var(--color-success)"}`,
+                  color: msg.isError ? "var(--color-danger)" : "var(--color-success)"
+                }}>
                   {msg.text}
                 </div>
               )}
 
-              {/* TAB 1: Metrics */}
+              {/* Tab 1: Server Metrics */}
               {activeTab === "metrics" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                <div>
                   <div className={styles.statsGrid}>
                     <div className={styles.statCard}>
-                      <span className={styles.statLabel}>Registered Profiles</span>
-                      <span className={styles.statVal} style={{ color: "var(--color-primary)" }}>{users.length}</span>
+                      <span className={styles.statLabel}>Total Registered Players</span>
+                      <span className={styles.statVal}>{users.length}</span>
                     </div>
                     <div className={styles.statCard}>
                       <span className={styles.statLabel}>Circulating War Bonds</span>
-                      <span className={styles.statVal} style={{ color: "#ffd700" }}>{circulatingBalance.toLocaleString()} $</span>
+                      <span className={styles.statVal} style={{ color: "#ffd700" }}>
+                        {circulatingBalance.toLocaleString()} $
+                      </span>
                     </div>
                     <div className={styles.statCard}>
-                      <span className={styles.statLabel}>Active Esports Contracts</span>
-                      <span className={styles.statVal} style={{ color: "#00e676" }}>{matches.length}</span>
+                      <span className={styles.statLabel}>Active Esports Markets</span>
+                      <span className={styles.statVal} style={{ color: "#00f0ff" }}>
+                        {matches.length}
+                      </span>
                     </div>
-                  </div>
-
-                  <div style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,0,85,0.3)", borderRadius: "8px", padding: "1.25rem" }}>
-                    <h4 style={{ color: "#ff0055", fontWeight: 800, marginBottom: "0.5rem" }}>
-                      🛡️ Administrator Authority Level: FULL OVERSEER
-                    </h4>
-                    <p style={{ fontSize: "0.82rem", color: "var(--color-text-secondary)", lineHeight: 1.5 }}>
-                      You have full authority to credit or debit user balances, ban fraudulent accounts, promote administrators, and resolve live esports tournament contracts.
-                    </p>
+                    <div className={styles.statCard}>
+                      <span className={styles.statLabel}>Banned Users</span>
+                      <span className={styles.statVal} style={{ color: "#ff0055" }}>
+                        {users.filter((u) => u.isBanned).length}
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* TAB 2: Users Management */}
+              {/* Tab 2: Users Management Roster */}
               {activeTab === "users" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
+                <div>
+                  <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1rem" }}>
                     <input
                       type="text"
+                      className={styles.searchInput}
                       placeholder="Search player by username or ID..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      style={{
-                        flex: 1,
-                        background: "rgba(0,0,0,0.5)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        borderRadius: "6px",
-                        padding: "0.5rem 0.85rem",
-                        color: "#fff",
-                        fontSize: "0.85rem"
-                      }}
                     />
                     <button
                       onClick={fetchUsers}
-                      style={{
-                        background: "rgba(255,255,255,0.05)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        color: "#fff",
-                        padding: "0.5rem 1rem",
-                        borderRadius: "6px",
-                        fontWeight: 700,
-                        fontSize: "0.8rem",
-                        cursor: "pointer"
-                      }}
+                      style={{ background: "rgba(0, 240, 255, 0.1)", border: "1px solid rgba(0, 240, 255, 0.3)", color: "var(--color-primary)", borderRadius: "6px", padding: "0 1rem", fontWeight: 800, cursor: "pointer" }}
                     >
                       🔄 Refresh Roster
                     </button>
                   </div>
 
-                  <div className={styles.tableContainer}>
+                  <div style={{ overflowX: "auto" }}>
                     <table className={styles.userTable}>
                       <thead>
                         <tr>
@@ -395,59 +422,79 @@ export const AdminModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
                       </thead>
                       <tbody>
                         {filteredUsers.map((u) => (
-                          <tr key={u.id}>
+                          <tr key={u.id} style={u.isBanned ? { opacity: 0.5, background: "rgba(255,23,68,0.05)" } : {}}>
                             <td>
-                              <div style={{ display: "flex", flexDirection: "column" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                                 <span style={{ fontWeight: 800, color: u.role === "admin" ? "#ff0055" : "#fff" }}>
-                                  {u.username} {u.role === "admin" ? "⚡ [ADMIN]" : ""}
+                                  {u.username}
                                 </span>
-                                <span style={{ fontSize: "0.68rem", color: "var(--color-text-muted)", fontFamily: "monospace" }}>{u.id}</span>
+                                {u.role === "admin" && (
+                                  <span style={{ fontSize: "0.6rem", padding: "0.1rem 0.3rem", borderRadius: "3px", background: "rgba(255,0,85,0.2)", color: "#ff0055", border: "1px solid #ff0055", fontWeight: 900 }}>
+                                    ⚡ ADMIN
+                                  </span>
+                                )}
                               </div>
+                              <span style={{ fontSize: "0.65rem", color: "var(--color-text-muted)" }}>
+                                {u.id}
+                              </span>
                             </td>
-                            <td style={{ color: "var(--color-text-secondary)", fontSize: "0.8rem" }}>
+                            <td style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>
                               {u.discord || "—"} / {u.roblox || "—"}
                             </td>
-                            <td style={{ fontFamily: "var(--font-family-title)", fontWeight: 800, color: "var(--color-primary)" }}>
-                              {u.balance.toLocaleString()} $
+                            <td style={{ fontWeight: 800, color: "var(--color-primary)" }}>
+                              {selectedUserId === u.id ? (
+                                <div style={{ display: "flex", gap: "0.3rem", alignItems: "center" }}>
+                                  <input
+                                    type="number"
+                                    value={newBalanceInput}
+                                    onChange={(e) => setNewBalanceInput(e.target.value)}
+                                    placeholder="New $"
+                                    style={{ width: "90px", padding: "0.25rem 0.4rem", background: "rgba(0,0,0,0.6)", border: "1px solid #00f0ff", color: "#fff", borderRadius: "4px", fontSize: "0.75rem" }}
+                                  />
+                                  <button
+                                    onClick={() => handleAdjustBalance(u.id)}
+                                    style={{ background: "#00f0ff", color: "#000", border: "none", borderRadius: "3px", padding: "0.25rem 0.5rem", fontWeight: 900, cursor: "pointer", fontSize: "0.7rem" }}
+                                  >
+                                    SAVE
+                                  </button>
+                                </div>
+                              ) : (
+                                <span>{u.balance.toLocaleString()} $</span>
+                              )}
                             </td>
                             <td>
-                              <span style={{ fontSize: "0.72rem", fontWeight: 800, color: u.isBanned ? "var(--color-danger)" : "var(--color-success)" }}>
-                                {u.isBanned ? "🔴 BANNED" : "🟢 ACTIVE"}
+                              <span style={{
+                                fontSize: "0.7rem",
+                                fontWeight: 800,
+                                color: u.isBanned ? "var(--color-danger)" : "var(--color-success)"
+                              }}>
+                                {u.isBanned ? "🚫 BANNED" : "🟢 ACTIVE"}
                               </span>
                             </td>
                             <td style={{ textAlign: "right" }}>
-                              {selectedUserId === u.id ? (
-                                <div style={{ display: "inline-flex", gap: "0.3rem" }}>
-                                  <input
-                                    type="number"
-                                    placeholder="New $"
-                                    value={newBalanceInput}
-                                    onChange={(e) => setNewBalanceInput(e.target.value)}
-                                    style={{ width: "80px", background: "rgba(0,0,0,0.6)", border: "1px solid var(--color-primary)", color: "#fff", borderRadius: "4px", padding: "0.2rem 0.4rem", fontSize: "0.75rem" }}
-                                  />
-                                  <button className={`${styles.actionBtn} ${styles.btnEdit}`} onClick={() => handleAdjustBalance(u.id)}>Save</button>
-                                  <button className={styles.actionBtn} onClick={() => setSelectedUserId(null)}>✕</button>
-                                </div>
-                              ) : (
-                                <>
-                                  <button className={`${styles.actionBtn} ${styles.btnEdit}`} onClick={() => { setSelectedUserId(u.id); setNewBalanceInput(u.balance.toString()); }}>
-                                    Set $
-                                  </button>
-                                  <button
-                                    className={`${styles.actionBtn} ${u.isBanned ? styles.btnUnban : styles.btnBan}`}
-                                    onClick={() => handleToggleBan(u.id, u.isBanned || false)}
-                                  >
-                                    {u.isBanned ? "Unban" : "Ban"}
-                                  </button>
-                                  <button
-                                    className={styles.actionBtn}
-                                    style={{ marginLeft: "0.3rem", background: "rgba(255,215,0,0.1)", border: "1px solid #ffd700", color: "#ffd700" }}
-                                    onClick={() => handleToggleRole(u.id, u.role || "user")}
-                                  >
-                                    {u.role === "admin" ? "Demote" : "Promote Admin"}
-                                  </button>
-                                </>
-                              )}
+                              <div style={{ display: "flex", gap: "0.4rem", justifyContent: "flex-end" }}>
+                                <button
+                                  className={styles.actionBtn}
+                                  onClick={() => {
+                                    setSelectedUserId(selectedUserId === u.id ? null : u.id);
+                                    setNewBalanceInput(u.balance.toString());
+                                  }}
+                                >
+                                  {selectedUserId === u.id ? "Cancel" : "Set $"}
+                                </button>
+                                <button
+                                  className={u.isBanned ? styles.unbanBtn : styles.banBtn}
+                                  onClick={() => handleToggleBan(u.id, !!u.isBanned)}
+                                >
+                                  {u.isBanned ? "Unban" : "Ban"}
+                                </button>
+                                <button
+                                  className={styles.promoteBtn}
+                                  onClick={() => handleToggleRole(u.id, u.role || "user")}
+                                >
+                                  {u.role === "admin" ? "Demote" : "Promote"}
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -457,39 +504,58 @@ export const AdminModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
                 </div>
               )}
 
-              {/* TAB 3: Settle Esports Matches */}
+              {/* Tab 3: Settle Esports Matches */}
               {activeTab === "matches" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                  {matches.map((m) => (
-                    <div key={m.id} style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.08)", padding: "1rem", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div>
-                        <span style={{ fontSize: "0.72rem", color: "var(--color-primary)", fontWeight: 800 }}>{m.game}</span>
-                        <h4 style={{ color: "#fff", fontSize: "0.95rem", margin: "0.2rem 0" }}>{m.time}</h4>
-                        <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>
-                          Status: {m.status.toUpperCase()} {m.winner !== "none" ? `(Winner: ${m.winner.toUpperCase()})` : ""}
-                        </span>
-                      </div>
-
-                      {m.status !== "completed" ? (
-                        <div style={{ display: "flex", gap: "0.5rem" }}>
-                          <button
-                            onClick={() => { resolveMatch(m.id, "teamA"); setMsg({ text: `Settled ${m.game} as YES winner!`, isError: false }); sound.playJackpot(); }}
-                            style={{ background: "rgba(0,230,118,0.15)", border: "1px solid var(--color-success)", color: "var(--color-success)", padding: "0.4rem 0.8rem", borderRadius: "4px", fontWeight: 800, fontSize: "0.75rem", cursor: "pointer" }}
-                          >
-                            Settle YES ({m.oddsA}x)
-                          </button>
-                          <button
-                            onClick={() => { resolveMatch(m.id, "teamB"); setMsg({ text: `Settled ${m.game} as NO winner!`, isError: false }); sound.playJackpot(); }}
-                            style={{ background: "rgba(255,0,85,0.15)", border: "1px solid #ff0055", color: "#ff0055", padding: "0.4rem 0.8rem", borderRadius: "4px", fontWeight: 800, fontSize: "0.75rem", cursor: "pointer" }}
-                          >
-                            Settle NO ({m.oddsB}x)
-                          </button>
+                <div>
+                  <h4 style={{ fontFamily: "var(--font-family-title)", color: "#fff", marginBottom: "1rem" }}>
+                    Live Entrenched League V Markets
+                  </h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                    {matches.map((m) => (
+                      <div
+                        key={m.id}
+                        style={{
+                          background: "rgba(255, 255, 255, 0.03)",
+                          border: "1px solid rgba(255, 255, 255, 0.08)",
+                          borderRadius: "8px",
+                          padding: "1rem",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center"
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#fff" }}>
+                            {m.teamA} vs {m.teamB}
+                          </div>
+                          <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
+                            Odds A: {m.oddsA}x • Odds B: {m.oddsB}x • Status: {m.status.toUpperCase()}
+                          </span>
                         </div>
-                      ) : (
-                        <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", fontWeight: 700 }}>Settled</span>
-                      )}
-                    </div>
-                  ))}
+
+                        {m.status === "live" ? (
+                          <div style={{ display: "flex", gap: "0.5rem" }}>
+                            <button
+                              onClick={() => { resolveMatch(m.id, "teamA"); sound.playWin(); }}
+                              style={{ background: "rgba(0, 240, 255, 0.15)", border: "1px solid #00f0ff", color: "#00f0ff", borderRadius: "4px", padding: "0.4rem 0.8rem", fontWeight: 800, cursor: "pointer", fontSize: "0.75rem" }}
+                            >
+                              Declare {m.teamA} Win
+                            </button>
+                            <button
+                              onClick={() => { resolveMatch(m.id, "teamB"); sound.playWin(); }}
+                              style={{ background: "rgba(255, 0, 85, 0.15)", border: "1px solid #ff0055", color: "#ff0055", borderRadius: "4px", padding: "0.4rem 0.8rem", fontWeight: 800, cursor: "pointer", fontSize: "0.75rem" }}
+                            >
+                              Declare {m.teamB} Win
+                            </button>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "var(--color-success)" }}>
+                            ✅ SETTLED (Winner: {m.winner === "teamA" ? m.teamA : m.teamB})
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </>
