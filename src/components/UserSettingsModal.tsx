@@ -10,7 +10,7 @@ const AVATARS = ["⚡", "👑", "🥷", "💎", "🐍", "💀", "🛡️", "🚀
 type SettingsTab = "profile" | "security" | "preferences" | "limits" | "history";
 
 export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-  const { user, balance, wagerHistory, vipTier, totalWagered, setIsAuthOpen } = useWallet();
+  const { user, balance, wagerHistory, vipTier, totalWagered, setIsAuthOpen, setIsAdminOpen } = useWallet();
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
 
   // Profile Form state
@@ -591,6 +591,36 @@ export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void 
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Overseer Quick Launch Banner */}
+          {user?.role === "admin" && (
+            <div style={{ marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid rgba(255, 0, 85, 0.25)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
+              <div>
+                <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "#ff0055", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                  ⚡ Overseer Clearance Active
+                </span>
+                <span style={{ fontSize: "0.72rem", color: "var(--color-text-muted)" }}>
+                  Open Command Center to manage citizens, treasury, and locks
+                </span>
+              </div>
+              <button
+                onClick={() => { onClose(); setIsAdminOpen(true); sound.playJackpot(); }}
+                style={{
+                  background: "rgba(255, 0, 85, 0.15)",
+                  border: "1.5px solid #ff0055",
+                  color: "#ff0055",
+                  padding: "0.45rem 0.9rem",
+                  borderRadius: "6px",
+                  fontWeight: 900,
+                  fontSize: "0.78rem",
+                  cursor: "pointer",
+                  boxShadow: "0 0 12px rgba(255, 0, 85, 0.3)"
+                }}
+              >
+                Launch Admin Panel ⚡
+              </button>
             </div>
           )}
         </div>

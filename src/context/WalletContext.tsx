@@ -62,6 +62,10 @@ export interface UserProfile {
   roblox?: string;
   isGuest?: boolean;
   isVerified?: boolean;
+  preferences?: {
+    avatar?: string;
+    bio?: string;
+  };
 }
 
 interface WalletContextType {

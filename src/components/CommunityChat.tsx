@@ -1,83 +1,151 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useWallet } from "../context/WalletContext";
 import sound from "../lib/sound";
 import styles from "./chat.module.css";
 
 interface ChatMessage {
   id: string;
+  userId?: string;
   sender: string;
+  avatar?: string;
+  role?: "admin" | "user";
+  isVerified?: boolean;
   vipTier: string;
   vipColor: string;
   text: string;
   isWin?: boolean;
-  time: string;
+  createdAt: string;
 }
 
-const INITIAL_MESSAGES: ChatMessage[] = [
-  { id: "1", sender: "xX_Kaiser_Xx", vipTier: "Platinum", vipColor: "#00f0ff", text: "DK vs IA match odds are wild tonight!", time: "12:30" },
-  { id: "2", sender: "TrenchSentry14", vipTier: "Gold", vipColor: "#ffd700", text: "Just hit 14x on Gold Roulette 🎡🔥", isWin: true, time: "12:32" },
-  { id: "3", sender: "GeneralFrench", vipTier: "Diamond", vipColor: "#bd00ff", text: "Plinko 10-ball drop is pure adrenaline", time: "12:34" },
-  { id: "4", sender: "DiggerBoy1916", vipTier: "Silver", vipColor: "#c0c0c0", text: "Anyone trying the new Blackjack table?", time: "12:35" }
-];
-
-const RANDOM_CHAT_BOTS = [
-  { sender: "SultanSlayer", vipTier: "Gold", vipColor: "#ffd700", texts: ["Cashed out Crash at 4.5x!", "GG all", "Who took DK YES?"] },
-  { sender: "SniperElite99", vipTier: "Platinum", vipColor: "#00f0ff", texts: ["Daily wheel gave me 500 bonds 🔥", "That 5-reel slot just hit 35x!"] },
-  { sender: "VerdunVeteran", vipTier: "Obsidian", vipColor: "#ff007a", texts: ["Rakeback vault stacked up nicely", "Trench Mines auto-pick is clutch!"] }
-];
-
 export const CommunityChat: React.FC = () => {
-  const { user, vipTier } = useWallet();
+  const { user, vipTier, isAdmin } = useWallet();
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [guestName, setGuestName] = useState("");
+  const [chatError, setChatError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const isFirstLoad = useRef(true);
 
-  // Auto-scroll on new messages
+  // Fetch real chat messages from MongoDB Atlas API
+  const fetchMessages = useCallback(async () => {
+    try {
+      const res = await fetch("/api/chat");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.messages && Array.isArray(data.messages)) {
+          setMessages(data.messages);
+        }
+      }
+    } catch (e) {
+      console.warn("Error fetching real chat:", e);
+    }
+  }, []);
+
+  // Poll for real messages when chat is open
+  useEffect(() => {
+    fetchMessages();
+
+    const interval = setInterval(() => {
+      fetchMessages();
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [fetchMessages]);
+
+  // Auto-scroll on new messages or open
   useEffect(() => {
     if (isOpen) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      if (isFirstLoad.current) {
+        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+        isFirstLoad.current = false;
+      } else {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }
     }
   }, [messages, isOpen]);
 
-  // Periodic simulated chatter
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const bot = RANDOM_CHAT_BOTS[Math.floor(Math.random() * RANDOM_CHAT_BOTS.length)];
-      const text = bot.texts[Math.floor(Math.random() * bot.texts.length)];
-      const newMsg: ChatMessage = {
-        id: "msg_" + Math.random().toString(36).substring(2, 9),
-        sender: bot.sender,
-        vipTier: bot.vipTier,
-        vipColor: bot.vipColor,
-        text,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages((prev) => [...prev.slice(-25), newMsg]);
-    }, 12000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleSendMessage = (e: React.FormEvent) => {
+  // Send a real message to MongoDB Atlas
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    const cleanText = inputText.trim();
+    if (!cleanText || isSending) return;
 
-    const myName = user ? user.username : "Guest Player";
-    const newMsg: ChatMessage = {
-      id: "msg_" + Math.random().toString(36).substring(2, 9),
+    setIsSending(true);
+    setChatError(null);
+
+    const tempId = `temp_${Date.now()}`;
+    const myName = user ? user.username : (guestName.trim() || "Guest");
+    const myAvatar = user?.preferences?.avatar || (user?.role === "admin" ? "👑" : "⚡");
+
+    // Optimistic message update
+    const optimisticMsg: ChatMessage = {
+      id: tempId,
+      userId: user?.id,
       sender: myName,
+      avatar: myAvatar,
+      role: user?.role || (isAdmin ? "admin" : "user"),
+      isVerified: !!user?.isVerified,
       vipTier: vipTier.name,
       vipColor: vipTier.color,
-      text: inputText.trim(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      text: cleanText,
+      createdAt: new Date().toISOString()
     };
 
-    setMessages((prev) => [...prev, newMsg]);
+    setMessages((prev) => [...prev, optimisticMsg]);
     setInputText("");
     sound.playClick();
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: cleanText,
+          vipTier: vipTier.name,
+          vipColor: vipTier.color,
+          guestName: guestName.trim() || undefined
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to deliver message.");
+      }
+
+      // Replace optimistic message with saved DB message
+      if (data.message) {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === tempId ? data.message : m))
+        );
+      }
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Delivery failed.";
+      setChatError(errMsg);
+      // Remove failed message
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  // Admin moderation: delete single message
+  const handleDeleteMessage = async (messageId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const res = await fetch("/api/chat", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId })
+      });
+      if (res.ok) {
+        setMessages((prev) => prev.filter((m) => m.id !== messageId));
+        sound.playClick();
+      }
+    } catch (e) {}
   };
 
   return (
@@ -85,47 +153,122 @@ export const CommunityChat: React.FC = () => {
       {/* Header */}
       <div className={styles.chatHeader} onClick={() => setIsOpen(!isOpen)}>
         <span className={styles.chatTitle}>
-          💬 Live Trollbox
+          💬 Live Citizen Chat
         </span>
         <span className={styles.chatOnline}>
-          <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#00e676" }} />
-          148 Online
+          <span className={styles.pulseDot} />
+          <span>Real-time</span>
         </span>
       </div>
 
       {isOpen && (
         <>
           <div className={styles.messagesList}>
-            {messages.map((m) => (
-              <div key={m.id} className={`${styles.messageItem} ${m.isWin ? styles.winAnnouncement : ""}`}>
-                <div className={styles.messageMeta}>
-                  <span
-                    className={styles.vipBadge}
-                    style={{ background: `${m.vipColor}25`, color: m.vipColor, border: `1px solid ${m.vipColor}50` }}
-                  >
-                    {m.vipTier}
-                  </span>
-                  <span className={styles.senderName}>{m.sender}</span>
-                  <span style={{ color: "var(--color-text-muted)", fontSize: "0.65rem", marginLeft: "auto" }}>{m.time}</span>
-                </div>
-                <span className={styles.messageText}>{m.text}</span>
+            {messages.length === 0 ? (
+              <div className={styles.emptyChat}>
+                <span style={{ fontSize: "1.8rem" }}>💬</span>
+                <span style={{ fontWeight: 700, color: "#fff" }}>No chat messages yet</span>
+                <span>Be the first citizen to send a message to the community!</span>
               </div>
-            ))}
+            ) : (
+              messages.map((m) => (
+                <div key={m.id} className={styles.messageItem}>
+                  <div className={styles.messageMeta}>
+                    <span className={styles.senderAvatar}>{m.avatar || "⚡"}</span>
+
+                    {m.role === "admin" && (
+                      <span className={styles.adminBadge}>ADMIN</span>
+                    )}
+
+                    <span
+                      className={styles.vipBadge}
+                      style={{
+                        background: `${m.vipColor}20`,
+                        color: m.vipColor,
+                        border: `1px solid ${m.vipColor}40`
+                      }}
+                    >
+                      {m.vipTier}
+                    </span>
+
+                    <span className={styles.senderName}>{m.sender}</span>
+
+                    {m.isVerified && (
+                      <span className={styles.verifiedBadge} title="Verified Discord/Roblox Citizen">
+                        🛡️
+                      </span>
+                    )}
+
+                    <span className={styles.messageTime}>
+                      {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+
+                    {isAdmin && (
+                      <button
+                        className={styles.deleteMsgBtn}
+                        onClick={(e) => handleDeleteMessage(m.id, e)}
+                        title="Delete Message (Overseer Action)"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                  <span className={styles.messageText}>{m.text}</span>
+                </div>
+              ))
+            )}
             <div ref={messagesEndRef} />
           </div>
 
           <form className={styles.chatInputRow} onSubmit={handleSendMessage}>
-            <input
-              type="text"
-              className={styles.chatInput}
-              placeholder="Send message..."
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              maxLength={120}
-            />
-            <button type="submit" className={styles.sendBtn}>
-              Send
-            </button>
+            {chatError && (
+              <span style={{ fontSize: "0.68rem", color: "var(--color-danger)", fontWeight: 700 }}>
+                ⚠️ {chatError}
+              </span>
+            )}
+
+            {!user && (
+              <input
+                type="text"
+                placeholder="Guest Nickname..."
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                maxLength={18}
+                style={{
+                  background: "rgba(0,0,0,0.5)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: "4px",
+                  padding: "0.25rem 0.5rem",
+                  color: "#fff",
+                  fontSize: "0.72rem",
+                  outline: "none",
+                  marginBottom: "0.2rem"
+                }}
+              />
+            )}
+
+            <div className={styles.inputControls}>
+              <input
+                type="text"
+                className={styles.chatInput}
+                placeholder={user ? `Message as ${user.username}...` : "Send a message..."}
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                maxLength={240}
+              />
+              <button
+                type="submit"
+                className={styles.sendBtn}
+                disabled={isSending || !inputText.trim()}
+              >
+                {isSending ? "..." : "Send"}
+              </button>
+            </div>
+
+            <div className={styles.chatFooterStatus}>
+              <span>{user ? `Logged in: ${user.username}` : "Guest Mode"}</span>
+              <span>{inputText.length}/240</span>
+            </div>
           </form>
         </>
       )}

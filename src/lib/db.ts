@@ -12,6 +12,7 @@ export interface DBUser {
   isGuest: boolean;
   isVerified?: boolean;
   isBanned?: boolean;
+  isLocked?: boolean;
   preferences?: {
     avatar?: string;
     bio?: string;
@@ -41,8 +42,43 @@ export interface DBUser {
   lastLoginAt?: string;
 }
 
+export interface DBChatMessage {
+  id: string;
+  userId?: string;
+  sender: string;
+  avatar?: string;
+  role?: "admin" | "user";
+  isVerified?: boolean;
+  vipTier: string;
+  vipColor: string;
+  text: string;
+  isWin?: boolean;
+  createdAt: string;
+}
+
+export interface AuditLog {
+  id: string;
+  action: string;
+  details: string;
+  targetUser?: string;
+  admin: string;
+  timestamp: string;
+}
+
 // In-Memory fallback store if MongoDB URI is not configured or offline
 const inMemoryUsers: Map<string, DBUser> = new Map();
+const inMemoryChatMessages: DBChatMessage[] = [];
+const inMemoryAuditLogs: AuditLog[] = [
+  {
+    id: "log_init_01",
+    action: "SYSTEM_STARTUP",
+    details: "WarWager Overseer Command Center initialized with Atlas MongoDB synchronization.",
+    admin: "SYSTEM",
+    timestamp: new Date().toISOString()
+  }
+];
+
+let isGlobalCasinoLocked = false;
 
 export function hashPassword(password: string): string {
   return crypto.createHash("sha256").update(password).digest("hex");
@@ -238,4 +274,115 @@ export async function getAllUsers(): Promise<DBUser[]> {
 }
 
 export const saveUser = createUser;
+ 
+export async function getAuditLogs(): Promise<AuditLog[]> {
+  try {
+    const db = await getDatabase();
+    if (db) {
+      const logs = await db.collection<AuditLog>("audit_logs").find({}).sort({ timestamp: -1 }).limit(50).toArray();
+      if (logs && logs.length > 0) return logs;
+    }
+  } catch (err) {}
+  return [...inMemoryAuditLogs].reverse();
+}
+
+export async function addAuditLog(log: Omit<AuditLog, "id" | "timestamp">): Promise<AuditLog> {
+  const newLog: AuditLog = {
+    id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    ...log,
+    timestamp: new Date().toISOString()
+  };
+
+  try {
+    const db = await getDatabase();
+    if (db) {
+      await db.collection<AuditLog>("audit_logs").insertOne(newLog);
+    }
+  } catch (err) {}
+
+  inMemoryAuditLogs.push(newLog);
+  if (inMemoryAuditLogs.length > 200) {
+    inMemoryAuditLogs.shift();
+  }
+  return newLog;
+}
+
+export function getCasinoLock(): boolean {
+  return isGlobalCasinoLocked;
+}
+
+export function setCasinoLock(locked: boolean): boolean {
+  isGlobalCasinoLocked = locked;
+  return isGlobalCasinoLocked;
+}
+
+export async function getChatMessages(limit: number = 60): Promise<DBChatMessage[]> {
+  try {
+    const db = await getDatabase();
+    if (db) {
+      const messages = await db
+        .collection<DBChatMessage>("chat_messages")
+        .find({})
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .toArray();
+      if (messages && messages.length > 0) {
+        return messages.reverse();
+      }
+    }
+  } catch (err) {
+    console.warn("Error fetching chat from Mongo, falling back to memory:", err);
+  }
+
+  return inMemoryChatMessages.slice(-limit);
+}
+
+export async function saveChatMessage(msg: Omit<DBChatMessage, "id" | "createdAt">): Promise<DBChatMessage> {
+  const newMsg: DBChatMessage = {
+    id: `chat_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    ...msg,
+    createdAt: new Date().toISOString()
+  };
+
+  try {
+    const db = await getDatabase();
+    if (db) {
+      await db.collection<DBChatMessage>("chat_messages").insertOne(newMsg);
+    }
+  } catch (err) {
+    console.warn("Error saving chat to Mongo, saving to memory:", err);
+  }
+
+  inMemoryChatMessages.push(newMsg);
+  if (inMemoryChatMessages.length > 300) {
+    inMemoryChatMessages.shift();
+  }
+
+  return newMsg;
+}
+
+export async function deleteChatMessage(id: string): Promise<boolean> {
+  try {
+    const db = await getDatabase();
+    if (db) {
+      await db.collection("chat_messages").deleteOne({ id });
+    }
+  } catch (err) {}
+
+  const idx = inMemoryChatMessages.findIndex((m) => m.id === id);
+  if (idx !== -1) inMemoryChatMessages.splice(idx, 1);
+  return true;
+}
+
+export async function clearAllChatMessages(): Promise<boolean> {
+  try {
+    const db = await getDatabase();
+    if (db) {
+      await db.collection("chat_messages").deleteMany({});
+    }
+  } catch (err) {}
+
+  inMemoryChatMessages.length = 0;
+  return true;
+}
 

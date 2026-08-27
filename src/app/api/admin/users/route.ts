@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { decryptSession } from "../../../../lib/auth";
-import { getAllUsers, findUserById } from "../../../../lib/db";
+import { getAllUsers, findUserById, getCasinoLock } from "../../../../lib/db";
 
 async function isAdminAuthorized(): Promise<boolean> {
   const cookieStore = await cookies();
@@ -30,15 +30,27 @@ export async function GET() {
     }
 
     const users = await getAllUsers();
+    const isCasinoLocked = getCasinoLock();
 
     const totalUsers = users.length;
     const circulatingBalance = users.reduce((sum, u) => sum + (u.balance || 0), 0);
+    const verifiedCount = users.filter((u) => u.isVerified || u.role === "admin").length;
+    const pendingCount = users.filter((u) => !u.isVerified && u.role !== "admin").length;
+    const lockedCount = users.filter((u) => u.isLocked).length;
+    const bannedCount = users.filter((u) => u.isBanned).length;
+
+    const safeUsers = users.map(({ passwordHash, ...safe }) => safe);
 
     return NextResponse.json({
       success: true,
-      users,
+      users: safeUsers,
       totalUsers,
-      circulatingBalance
+      circulatingBalance,
+      verifiedCount,
+      pendingCount,
+      lockedCount,
+      bannedCount,
+      isCasinoLocked
     });
   } catch (error) {
     console.error("Admin Users Fetch Error:", error);
