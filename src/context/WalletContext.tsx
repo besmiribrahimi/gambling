@@ -173,16 +173,7 @@ const DEFAULT_MATCHES: EsportsMatch[] = [
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
 export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserProfile | null>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const cached = localStorage.getItem("cw_user_cache");
-        if (cached) return JSON.parse(cached);
-      } catch (e) {}
-    }
-    return null;
-  });
-
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
   const [isFairModalOpen, setIsFairModalOpen] = useState(false);
@@ -191,21 +182,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
   const [bigWinModal, setBigWinModal] = useState<BigWinPayload | null>(null);
 
-  const [balance, setBalance] = useState<number>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const cached = localStorage.getItem("cw_user_cache");
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (parsed && typeof parsed.balance === "number") return parsed.balance;
-        }
-        const stored = localStorage.getItem("cw_balance");
-        if (stored) return Number(stored);
-      } catch (e) {}
-    }
-    return 1000;
-  });
-
+  const [balance, setBalance] = useState<number>(1000);
   const [inventory, setInventory] = useState<Skin[]>([]);
   const [wagerHistory, setWagerHistory] = useState<Wager[]>([]);
   const [matches, setMatches] = useState<EsportsMatch[]>(DEFAULT_MATCHES);
@@ -238,6 +215,18 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Load state on mount: Session check -> fallback to localStorage
   useEffect(() => {
+    // 1. Immediate client-side cache restoration
+    try {
+      const cached = localStorage.getItem("cw_user_cache");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.id) {
+          setUser(parsed);
+          if (typeof parsed.balance === "number") setBalance(parsed.balance);
+        }
+      }
+    } catch (e) {}
+
     const fetchSession = async () => {
       try {
         const res = await fetch("/api/auth/me");
@@ -265,7 +254,6 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           localStorage.removeItem("cw_user_cache");
           setUser(null);
         } else {
-          // If server says not logged in and no cache
           const cached = localStorage.getItem("cw_user_cache");
           if (!cached) {
             setUser(null);
