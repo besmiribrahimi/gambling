@@ -7,14 +7,7 @@ import styles from "./userSettings.module.css";
 
 const AVATARS = ["⚡", "👑", "🥷", "💎", "🐍", "💀", "🛡️", "🚀", "🔥", "🎯"];
 
-type SettingsTab = "profile" | "security" | "preferences" | "limits" | "database";
-
-interface HealthStatus {
-  isConnected: boolean;
-  mode: "vps_mongodb" | "in_memory_vault";
-  latencyMs: number;
-  userCount: number;
-}
+type SettingsTab = "profile" | "security" | "preferences" | "limits" | "history";
 
 export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
   const { user, balance, wagerHistory, vipTier, totalWagered, setIsAuthOpen } = useWallet();
@@ -24,7 +17,7 @@ export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void 
   const [avatar, setAvatar] = useState("⚡");
   const [discord, setDiscord] = useState("");
   const [roblox, setRoblox] = useState("");
-  const [bio, setBio] = useState("ClashWager high-roller & trench veteran.");
+  const [bio, setBio] = useState("WarWager high-roller & trench veteran.");
 
   // Password Form state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -38,23 +31,14 @@ export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void 
 
   // Status & Feedback
   const [feedback, setFeedback] = useState<{ text: string; isError: boolean } | null>(null);
-  const [dbHealth, setDbHealth] = useState<HealthStatus | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Load profile & DB health on open
+  // Load profile on open
   useEffect(() => {
     if (!isOpen) return;
 
     const loadData = async () => {
       try {
-        // Fetch DB health
-        const healthRes = await fetch("/api/system/status");
-        if (healthRes.ok) {
-          const data = await healthRes.json();
-          setDbHealth(data.database);
-        }
-
-        // Fetch user profile if logged in
         if (user) {
           const profRes = await fetch("/api/user/profile");
           if (profRes.ok) {
@@ -113,8 +97,7 @@ export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void 
 
     try {
       if (!user) {
-        setFeedback({ text: "Profile updated locally for guest session!", isError: false });
-        sound.playWin();
+        setFeedback({ text: "Sign in to save profile settings.", isError: true });
         return;
       }
 
@@ -127,7 +110,7 @@ export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to update profile.");
 
-      setFeedback({ text: "Profile successfully saved to VPS Database!", isError: false });
+      setFeedback({ text: "Profile settings successfully saved!", isError: false });
       sound.playWin();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error saving profile.";
@@ -182,46 +165,49 @@ export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void 
   };
 
   const handleExportHistory = (format: "json" | "csv") => {
-    sound.playClick();
     if (wagerHistory.length === 0) {
-      setFeedback({ text: "No transaction history to export.", isError: true });
+      setFeedback({ text: "No wager history available to export.", isError: true });
       return;
     }
 
-    let dataStr = "";
+    let fileContent = "";
     let mimeType = "";
-    let fileName = `clashwager_history_${Date.now()}`;
+    let fileName = `warwager_ledger_${Date.now()}`;
 
     if (format === "json") {
-      dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(wagerHistory, null, 2));
+      fileContent = JSON.stringify(wagerHistory, null, 2);
       mimeType = "application/json";
       fileName += ".json";
     } else {
-      const headers = ["ID", "Game", "Description", "Wager", "Payout", "Result", "Timestamp"];
+      const headers = ["ID", "Game Type", "Description", "Amount ($)", "Result", "Payout ($)", "Timestamp"];
       const rows = wagerHistory.map((w) => [
         w.id,
         w.type,
         `"${w.description.replace(/"/g, '""')}"`,
         w.amount,
-        w.payout,
         w.result,
+        w.payout,
         `"${w.date}"`
       ]);
-      const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-      dataStr = "data:text/csv;charset=utf-8," + encodeURIComponent(csvContent);
+      fileContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
       mimeType = "text/csv";
       fileName += ".csv";
     }
 
+    const blob = new Blob([fileContent], { type: mimeType });
+    const url = URL.createObjectURL(blob);
     const downloadAnchor = document.createElement("a");
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", fileName);
+    downloadAnchor.href = url;
+    downloadAnchor.download = fileName;
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
 
     setFeedback({ text: `Exported ${wagerHistory.length} transaction records as ${format.toUpperCase()}!`, isError: false });
   };
+
+  const wonWagers = wagerHistory.filter((w) => w.result === "win").length;
+  const lostWagers = wagerHistory.filter((w) => w.result === "lose").length;
 
   return (
     <div className={styles.overlay}>
@@ -273,7 +259,7 @@ export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void 
             className={`${styles.navTabBtn} ${activeTab === "security" ? styles.navTabActive : ""}`}
             onClick={() => { setActiveTab("security"); setFeedback(null); sound.playClick(); }}
           >
-            🔒 Security & Auth
+            🔒 Security & PIN
           </button>
           <button
             className={`${styles.navTabBtn} ${activeTab === "preferences" ? styles.navTabActive : ""}`}
@@ -288,10 +274,10 @@ export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void 
             🛡️ Limits & Control
           </button>
           <button
-            className={`${styles.navTabBtn} ${activeTab === "database" ? styles.navTabActive : ""}`}
-            onClick={() => { setActiveTab("database"); setFeedback(null); sound.playClick(); }}
+            className={`${styles.navTabBtn} ${activeTab === "history" ? styles.navTabActive : ""}`}
+            onClick={() => { setActiveTab("history"); setFeedback(null); sound.playClick(); }}
           >
-            💽 VPS DB Diagnostics
+            📜 Betting Ledger
           </button>
         </div>
 
@@ -391,7 +377,7 @@ export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void 
                 color: "var(--color-text-secondary)",
                 lineHeight: 1.4
               }}>
-                🔒 <strong>Privacy Notice:</strong> Your Roblox and Discord usernames are securely encrypted. They are strictly hidden and will never be shown on public leaderboards, games, or chat feeds.
+                🔒 <strong>Privacy Guarantee:</strong> Your Roblox and Discord usernames are securely encrypted. They are strictly private and will never be shown on public leaderboards, live games, or chat feeds.
               </div>
 
               <div className={styles.fieldGroup}>
@@ -407,75 +393,60 @@ export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void 
               </div>
 
               <button type="submit" className={styles.saveBtn} disabled={loading}>
-                {loading ? "Saving to VPS..." : "Save Profile Details"}
+                {loading ? "Saving Details..." : "Save Profile Details"}
               </button>
             </form>
           )}
 
-          {/* TAB 2: Security & Auth */}
+          {/* TAB 2: Security & Password */}
           {activeTab === "security" && (
             <form onSubmit={handleChangePassword} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
               <div>
-                <h3 className={styles.sectionTitle}>Account Credentials</h3>
-                <p className={styles.sectionSubtitle}>
-                  {user ? "Update your secure login password PIN" : "Currently operating in Guest Session mode"}
-                </p>
+                <h3 className={styles.sectionTitle}>Change Password PIN</h3>
+                <p className={styles.sectionSubtitle}>Update your authentication passcode for enhanced security</p>
               </div>
 
-              {user ? (
-                <>
-                  <div className={styles.fieldGroup}>
-                    <label className={styles.fieldLabel}>Current Password PIN</label>
-                    <input
-                      type="password"
-                      className={styles.fieldInput}
-                      placeholder="Enter current password..."
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      required
-                    />
-                  </div>
+              <div className={styles.fieldGroup}>
+                <label className={styles.fieldLabel}>Current Password PIN</label>
+                <input
+                  type="password"
+                  className={styles.fieldInput}
+                  placeholder="Enter current password..."
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                />
+              </div>
 
-                  <div className={styles.formGrid}>
-                    <div className={styles.fieldGroup}>
-                      <label className={styles.fieldLabel}>New Password PIN</label>
-                      <input
-                        type="password"
-                        className={styles.fieldInput}
-                        placeholder="Min. 5 characters..."
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-
-                    <div className={styles.fieldGroup}>
-                      <label className={styles.fieldLabel}>Confirm New Password PIN</label>
-                      <input
-                        type="password"
-                        className={styles.fieldInput}
-                        placeholder="Confirm password..."
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <button type="submit" className={styles.saveBtn} disabled={loading}>
-                    {loading ? "Updating..." : "Update Password"}
-                  </button>
-                </>
-              ) : (
-                <div style={{ background: "rgba(0, 240, 255, 0.05)", border: "1px dashed var(--color-primary)", padding: "1.5rem", borderRadius: "8px", textAlign: "center" }}>
-                  <p style={{ color: "#fff", fontWeight: 700, marginBottom: "0.5rem" }}>
-                    You are currently playing as a Guest.
-                  </p>
-                  <p style={{ fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
-                    Register a permanent account to sync your War Bonds across devices and save your progress to the VPS Database.
-                  </p>
+              <div className={styles.formGrid}>
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>New Password PIN</label>
+                  <input
+                    type="password"
+                    className={styles.fieldInput}
+                    placeholder="Min. 5 characters..."
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                  />
                 </div>
-              )}
+
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>Confirm New Password</label>
+                  <input
+                    type="password"
+                    className={styles.fieldInput}
+                    placeholder="Re-enter new password..."
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <button type="submit" className={styles.saveBtn} disabled={loading}>
+                {loading ? "Updating PIN..." : "Update Password PIN"}
+              </button>
             </form>
           )}
 
@@ -483,19 +454,20 @@ export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void 
           {activeTab === "preferences" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
               <div>
-                <h3 className={styles.sectionTitle}>Audio & Casino Atmosphere</h3>
-                <p className={styles.sectionSubtitle}>Adjust sound effects volume and visual behavior</p>
-                
-                <div className={styles.fieldGroup}>
-                  <label className={styles.fieldLabel}>Master Sound Volume ({volume}%)</label>
+                <h3 className={styles.sectionTitle}>Sound Effects Volume</h3>
+                <p className={styles.sectionSubtitle}>Adjust the procedural Web Audio casino synthesizer volume</p>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginTop: "0.5rem" }}>
                   <input
                     type="range"
-                    min="0"
-                    max="100"
+                    min={0}
+                    max={100}
                     value={volume}
-                    onChange={(e) => handleVolumeChange(parseInt(e.target.value))}
-                    style={{ width: "100%", accentColor: "var(--color-primary)", cursor: "pointer" }}
+                    onChange={(e) => handleVolumeChange(Number(e.target.value))}
+                    style={{ flex: 1, accentColor: "var(--color-primary)" }}
                   />
+                  <span style={{ fontWeight: 800, minWidth: "45px", textAlign: "right", color: "var(--color-primary)" }}>
+                    {volume}%
+                  </span>
                 </div>
               </div>
 
@@ -514,7 +486,9 @@ export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void 
                         fontWeight: 800,
                         fontSize: "0.8rem",
                         background: oddsFormat === fmt ? "var(--color-primary)" : "rgba(255,255,255,0.05)",
-                        color: oddsFormat === fmt ? "#000" : "#fff"
+                        color: oddsFormat === fmt ? "#000" : "#fff",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        cursor: "pointer"
                       }}
                     >
                       {fmt.toUpperCase()} ({fmt === "decimal" ? "2.00x" : fmt === "american" ? "+100" : "1/1"})
@@ -567,57 +541,50 @@ export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void 
             </div>
           )}
 
-          {/* TAB 5: VPS Database Diagnostics */}
-          {activeTab === "database" && (
+          {/* TAB 5: Betting History & Ledger Export */}
+          {activeTab === "history" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
               <div>
-                <h3 className={styles.sectionTitle}>VPS Database Health & Ledger Export</h3>
-                <p className={styles.sectionSubtitle}>Live diagnostics for MongoDB VPS instance connection</p>
+                <h3 className={styles.sectionTitle}>Player History & Ledger Export</h3>
+                <p className={styles.sectionSubtitle}>Review your transaction summary and download complete betting records</p>
               </div>
 
-              {/* Health Card */}
-              <div className={styles.healthCard}>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                  <span className={styles.healthTitle}>
-                    <span>🟢</span> Status: {dbHealth?.isConnected ? "Connected to VPS MongoDB" : "Local Vault Mode (VPS Ready)"}
-                  </span>
-                  <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>
-                    Mode: {dbHealth?.mode === "vps_mongodb" ? "Production VPS MongoDB" : "In-Memory / Local Storage Fallback"} • Latency: {dbHealth?.latencyMs || 1}ms
-                  </span>
+              {/* Stats overview card */}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+                gap: "0.75rem"
+              }}>
+                <div style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.08)", padding: "0.8rem", borderRadius: "6px" }}>
+                  <span style={{ fontSize: "0.72rem", color: "var(--color-text-muted)", display: "block" }}>Total Transactions</span>
+                  <span style={{ fontSize: "1.15rem", fontWeight: 800, color: "#fff" }}>{wagerHistory.length}</span>
                 </div>
-                <span className={styles.healthBadge}>
-                  {dbHealth?.userCount || 1} Registered Profiles
-                </span>
-              </div>
-
-              <div style={{ background: "rgba(0,0,0,0.3)", padding: "1rem", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <h4 style={{ fontSize: "0.85rem", fontWeight: 800, color: "#fff", marginBottom: "0.4rem" }}>
-                  How to Connect to your VPS MongoDB:
-                </h4>
-                <p style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)", lineHeight: 1.5 }}>
-                  Add your connection URI in <code style={{ color: "#00f0ff" }}>.env.local</code>:<br />
-                  <code style={{ color: "#ffd700", display: "block", marginTop: "0.3rem" }}>
-                    MONGODB_URI=mongodb://your_user:your_password@your-vps-ip:27017/gambling
-                  </code>
-                </p>
+                <div style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(0,230,118,0.2)", padding: "0.8rem", borderRadius: "6px" }}>
+                  <span style={{ fontSize: "0.72rem", color: "var(--color-success)", display: "block" }}>Wagers Won</span>
+                  <span style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--color-success)" }}>{wonWagers}</span>
+                </div>
+                <div style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,23,68,0.2)", padding: "0.8rem", borderRadius: "6px" }}>
+                  <span style={{ fontSize: "0.72rem", color: "var(--color-danger)", display: "block" }}>Wagers Lost</span>
+                  <span style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--color-danger)" }}>{lostWagers}</span>
+                </div>
               </div>
 
               {/* Ledger Data Export */}
-              <div>
+              <div style={{ marginTop: "0.5rem" }}>
                 <h4 style={{ fontSize: "0.85rem", fontWeight: 800, color: "#fff", marginBottom: "0.6rem" }}>
-                  Export Wager & Transaction Ledger
+                  Download Complete Transaction Ledger
                 </h4>
-                <div style={{ display: "flex", gap: "0.75rem" }}>
+                <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
                   <button
                     className={styles.saveBtn}
-                    style={{ background: "rgba(0, 240, 255, 0.15)", color: "#00f0ff", border: "1px solid rgba(0, 240, 255, 0.4)" }}
+                    style={{ background: "rgba(0, 240, 255, 0.15)", color: "#00f0ff", border: "1px solid rgba(0, 240, 255, 0.4)", flex: 1, minWidth: "180px" }}
                     onClick={() => handleExportHistory("json")}
                   >
                     📥 Download JSON Ledger
                   </button>
                   <button
                     className={styles.saveBtn}
-                    style={{ background: "rgba(0, 230, 118, 0.15)", color: "#00e676", border: "1px solid rgba(0, 230, 118, 0.4)" }}
+                    style={{ background: "rgba(0, 230, 118, 0.15)", color: "#00e676", border: "1px solid rgba(0, 230, 118, 0.4)", flex: 1, minWidth: "180px" }}
                     onClick={() => handleExportHistory("csv")}
                   >
                     📊 Download CSV Spreadsheet
