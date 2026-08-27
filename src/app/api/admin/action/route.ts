@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { decryptSession } from "../../../../lib/auth";
-import { findUserById, updateUser, DBUser } from "../../../../lib/db";
+import { findUserById, updateUser, getAllUsers, DBUser, getDatabase } from "../../../../lib/db";
 
 async function isAdminAuthorized(): Promise<boolean> {
   const cookieStore = await cookies();
@@ -32,6 +32,25 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { action, userId, ...payload } = body;
 
+    // Airdrop to all users (does not require a single userId)
+    if (action === "airdrop-all") {
+      const { amount } = payload;
+      if (typeof amount !== "number" || isNaN(amount) || amount <= 0) {
+        return NextResponse.json({ error: "Invalid airdrop amount." }, { status: 400 });
+      }
+
+      const allUsers = await getAllUsers();
+      let updatedCount = 0;
+      for (const u of allUsers) {
+        if (!u.isBanned) {
+          const newBal = (u.balance || 0) + amount;
+          await updateUser(u.id, { balance: newBal });
+          updatedCount++;
+        }
+      }
+      return NextResponse.json({ success: true, updatedCount, amount });
+    }
+
     // Anti-injection: ensure action and userId are strings
     if (typeof action !== "string" || typeof userId !== "string") {
       return NextResponse.json(
@@ -53,6 +72,17 @@ export async function POST(request: Request) {
 
       await updateUser(userId, { balance: amount });
       return NextResponse.json({ success: true, newBalance: amount });
+    }
+
+    if (action === "quick-add") {
+      const { amount } = payload;
+      if (typeof amount !== "number" || isNaN(amount)) {
+        return NextResponse.json({ error: "Invalid amount." }, { status: 400 });
+      }
+
+      const newBal = Math.max(0, (user.balance || 0) + amount);
+      await updateUser(userId, { balance: newBal });
+      return NextResponse.json({ success: true, newBalance: newBal });
     }
 
     if (action === "toggle-ban") {
@@ -85,33 +115,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, role });
     }
 
-    if (action === "add-wager") {
-      const { type, description, amount, result, payout } = payload;
-      
-      if (
-        typeof type !== "string" ||
-        typeof description !== "string" ||
-        typeof amount !== "number" ||
-        typeof result !== "string" ||
-        typeof payout !== "number"
-      ) {
-        return NextResponse.json({ error: "Invalid wager payload fields." }, { status: 400 });
-      }
+    if (action === "get-user-details") {
+      const { passwordHash, ...safeDetails } = user;
+      return NextResponse.json({ success: true, user: safeDetails });
+    }
 
-      const newWager: DBUser["history"][0] = {
-        id: "tx_" + Math.random().toString(36).substring(2, 11),
-        type: type as DBUser["history"][0]["type"],
-        description,
-        amount,
-        result: result as "win" | "lose" | "pending",
-        payout,
-        date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + " " + new Date().toLocaleDateString()
-      };
-
-      const updatedHistory = [newWager, ...(user.history || [])];
-      await updateUser(userId, { history: updatedHistory });
-
-      return NextResponse.json({ success: true, newWager });
+    if (action === "delete-user") {
+      try {
+        const db = await getDatabase();
+        if (db) {
+          await db.collection("users").deleteOne({ id: userId });
+        }
+      } catch (e) {}
+      return NextResponse.json({ success: true, deletedId: userId });
     }
 
     return NextResponse.json({ error: "Action not recognized." }, { status: 400 });
