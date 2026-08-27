@@ -17,7 +17,7 @@ interface HealthStatus {
 }
 
 export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-  const { user, balance, wagerHistory, vipTier, totalWagered } = useWallet();
+  const { user, balance, wagerHistory, vipTier, totalWagered, setIsAuthOpen } = useWallet();
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
 
   // Profile Form state
@@ -74,6 +74,37 @@ export const UserSettingsModal: React.FC<{ isOpen: boolean; onClose: () => void 
   }, [isOpen, user]);
 
   if (!isOpen) return null;
+
+  if (!user) {
+    return (
+      <div className={styles.overlay}>
+        <div className={styles.modal} style={{ maxWidth: "480px", textAlign: "center", padding: "2.5rem 2rem", alignItems: "center" }}>
+          <div style={{ fontSize: "3.2rem", marginBottom: "0.5rem" }}>🔒</div>
+          <h2 style={{ fontFamily: "var(--font-family-title)", fontSize: "1.4rem", color: "#fff", marginBottom: "0.5rem" }}>
+            Member Settings Locked
+          </h2>
+          <p style={{ fontSize: "0.85rem", color: "var(--color-text-secondary)", marginBottom: "1.5rem", lineHeight: 1.5 }}>
+            Anonymous guests cannot modify settings or customize player avatars. Create a free account or sign in to unlock your personal profile, cloud vault, and claim 1,000 $ War Bonds!
+          </p>
+          <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}>
+            <button
+              className={styles.saveBtn}
+              style={{ alignSelf: "center" }}
+              onClick={() => { onClose(); setIsAuthOpen(true); sound.playClick(); }}
+            >
+              Sign In / Register
+            </button>
+            <button
+              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", borderRadius: "6px", padding: "0.75rem 1.2rem", fontWeight: 700, cursor: "pointer" }}
+              onClick={onClose}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();

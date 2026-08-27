@@ -80,23 +80,24 @@ export const Navbar: React.FC = () => {
             ⚖️ Provably Fair
           </button>
 
-          {/* Admin Command Center Quick Launch Button */}
-          {isAdmin && (
+          {/* Admin Command Center Launch Button (STRICTLY for logged-in Admin accounts ONLY) */}
+          {user && isAdmin && (
             <button
               onClick={() => { setIsAdminOpen(true); sound.playJackpot(); }}
               style={{
                 marginLeft: "0.5rem",
-                background: "rgba(255, 0, 85, 0.15)",
+                background: "rgba(255, 0, 85, 0.2)",
                 border: "1.5px solid #ff0055",
                 color: "#ff0055",
-                padding: "0.3rem 0.65rem",
+                padding: "0.35rem 0.75rem",
                 borderRadius: "4px",
                 fontSize: "0.72rem",
                 fontWeight: 900,
                 display: "flex",
                 alignItems: "center",
                 gap: "0.3rem",
-                boxShadow: "0 0 12px rgba(255, 0, 85, 0.4)"
+                boxShadow: "0 0 16px rgba(255, 0, 85, 0.5)",
+                cursor: "pointer"
               }}
             >
               ⚡ ADMIN PANEL
@@ -130,129 +131,140 @@ export const Navbar: React.FC = () => {
             id="btn-claim-daily-wheel"
             className={styles.faucetBtn}
             style={isWheelReady ? { border: "1px solid #ffd700", boxShadow: "0 0 12px rgba(255,215,0,0.4)" } : {}}
-            onClick={() => { setIsDailyModalOpen(true); sound.playClick(); }}
+            onClick={() => { 
+              if (!user) {
+                setIsAuthOpen(true);
+              } else {
+                setIsDailyModalOpen(true);
+              }
+              sound.playClick(); 
+            }}
           >
             {isWheelReady ? "🎁 Daily Wheel (Ready!)" : "🎁 Daily Wheel"}
           </button>
 
-          {/* VIP Tier Badge & Progress */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-end",
-              background: "rgba(0, 0, 0, 0.3)",
-              border: `1px solid ${vipTier.color}40`,
-              padding: "0.35rem 0.75rem",
-              borderRadius: "6px",
-              gap: "0.2rem",
-              cursor: "pointer"
-            }}
-            onClick={() => { setIsSettingsOpen(true); sound.playClick(); }}
-            title="Open Account & VIP Settings"
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.75rem", fontWeight: 800, color: vipTier.color }}>
-              <span>{vipTier.badge}</span>
-              <span>{vipTier.name} VIP</span>
-            </div>
-            <div style={{ width: "70px", height: "4px", background: "rgba(255,255,255,0.1)", borderRadius: "2px", overflow: "hidden" }}>
-              <div style={{ width: `${vipProgress}%`, height: "100%", background: vipTier.color }} />
-            </div>
-          </div>
-
-          {/* Unified Wallet Balance with Account Mode Indicator */}
-          <div className={styles.walletBadge}>
-            <span style={{ fontSize: "1.1rem" }}>🪙</span>
-            <span className={styles.balance}>{balance.toLocaleString()} $</span>
-          </div>
-
-          {/* Account Settings Gear Button */}
-          <button
-            id="btn-account-settings"
-            onClick={() => { setIsSettingsOpen(true); sound.playClick(); }}
-            title="Account Settings & VPS Database Vault"
-            style={{
-              background: "rgba(0, 240, 255, 0.08)",
-              border: "1px solid rgba(0, 240, 255, 0.3)",
-              borderRadius: "6px",
-              padding: "0.45rem 0.75rem",
-              fontSize: "0.85rem",
-              color: "var(--color-primary)",
-              fontWeight: 800,
-              display: "flex",
-              alignItems: "center",
-              gap: "0.4rem",
-              cursor: "pointer"
-            }}
-          >
-            ⚙️ Settings
-          </button>
-
-          {/* Account Indicator: Clear Difference between Registered vs Anonymous Guest */}
+          {/* Logged in User Controls */}
           {user ? (
-            <div className={styles.userBox}>
+            <>
+              {/* VIP Tier Badge & Progress */}
               <div
-                onClick={() => { setIsSettingsOpen(true); sound.playClick(); }}
-                style={{ display: "flex", flexDirection: "column", cursor: "pointer" }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                  <span className={styles.username}>
-                    {user.username}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: "0.6rem",
-                      fontWeight: 900,
-                      padding: "0.1rem 0.35rem",
-                      borderRadius: "3px",
-                      background: user.role === "admin" ? "rgba(255, 0, 85, 0.2)" : "rgba(0, 230, 118, 0.2)",
-                      color: user.role === "admin" ? "#ff0055" : "var(--color-success)",
-                      border: `1px solid ${user.role === "admin" ? "#ff0055" : "var(--color-success)"}`
-                    }}
-                  >
-                    {user.role === "admin" ? "ADMIN" : "VERIFIED"}
-                  </span>
-                </div>
-                <span style={{ fontSize: "0.68rem", color: "var(--color-text-muted)" }}>
-                  ☁️ VPS Synced
-                </span>
-              </div>
-              <button 
-                id="btn-auth-logout" 
-                className={styles.logoutBtn} 
-                onClick={logoutUser}
-              >
-                LOGOUT
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <div
-                onClick={() => { setIsAuthOpen(true); sound.playClick(); }}
                 style={{
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "flex-end",
-                  cursor: "pointer",
-                  padding: "0.2rem 0.5rem",
-                  borderRadius: "4px",
-                  background: "rgba(255, 170, 0, 0.08)",
-                  border: "1px dashed rgba(255, 170, 0, 0.35)"
+                  background: "rgba(0, 0, 0, 0.3)",
+                  border: `1px solid ${vipTier.color}40`,
+                  padding: "0.35rem 0.75rem",
+                  borderRadius: "6px",
+                  gap: "0.2rem",
+                  cursor: "pointer"
+                }}
+                onClick={() => { setIsSettingsOpen(true); sound.playClick(); }}
+                title="Open Account & VIP Settings"
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.75rem", fontWeight: 800, color: vipTier.color }}>
+                  <span>{vipTier.badge}</span>
+                  <span>{vipTier.name} VIP</span>
+                </div>
+                <div style={{ width: "70px", height: "4px", background: "rgba(255,255,255,0.1)", borderRadius: "2px", overflow: "hidden" }}>
+                  <div style={{ width: `${vipProgress}%`, height: "100%", background: vipTier.color }} />
+                </div>
+              </div>
+
+              {/* Wallet Balance (ONLY visible to Logged-in Members) */}
+              <div className={styles.walletBadge}>
+                <span style={{ fontSize: "1.1rem" }}>🪙</span>
+                <span className={styles.balance}>{balance.toLocaleString()} $</span>
+              </div>
+
+              {/* Account Settings Gear Button */}
+              <button
+                id="btn-account-settings"
+                onClick={() => { setIsSettingsOpen(true); sound.playClick(); }}
+                title="Account Settings & Preferences"
+                style={{
+                  background: "rgba(0, 240, 255, 0.08)",
+                  border: "1px solid rgba(0, 240, 255, 0.3)",
+                  borderRadius: "6px",
+                  padding: "0.45rem 0.75rem",
+                  fontSize: "0.85rem",
+                  color: "var(--color-primary)",
+                  fontWeight: 800,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  cursor: "pointer"
                 }}
               >
-                <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#ffaa00" }}>
-                  👻 GUEST (ANON)
-                </span>
-                <span style={{ fontSize: "0.62rem", color: "var(--color-text-muted)" }}>
-                  Local Storage Only
-                </span>
+                ⚙️ Settings
+              </button>
+
+              {/* User Identity & Logout */}
+              <div className={styles.userBox}>
+                <div
+                  onClick={() => { setIsSettingsOpen(true); sound.playClick(); }}
+                  style={{ display: "flex", flexDirection: "column", cursor: "pointer" }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                    <span className={styles.username}>
+                      {user.username}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.6rem",
+                        fontWeight: 900,
+                        padding: "0.1rem 0.35rem",
+                        borderRadius: "3px",
+                        background: user.role === "admin" ? "rgba(255, 0, 85, 0.25)" : "rgba(0, 230, 118, 0.25)",
+                        color: user.role === "admin" ? "#ff0055" : "var(--color-success)",
+                        border: `1px solid ${user.role === "admin" ? "#ff0055" : "var(--color-success)"}`
+                      }}
+                    >
+                      {user.role === "admin" ? "ADMIN" : "MEMBER"}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: "0.65rem", color: "var(--color-text-muted)" }}>
+                    ☁️ VPS Synced
+                  </span>
+                </div>
+                <button 
+                  id="btn-auth-logout" 
+                  className={styles.logoutBtn} 
+                  onClick={logoutUser}
+                >
+                  LOGOUT
+                </button>
               </div>
+            </>
+          ) : (
+            /* Unauthenticated Guest Controls: No balance displayed, clear signin/register buttons */
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+              <button
+                id="btn-claim-bonus"
+                onClick={() => { setIsAuthOpen(true); sound.playClick(); }}
+                style={{
+                  background: "linear-gradient(135deg, #ffd700 0%, #ff8c00 100%)",
+                  color: "#000",
+                  fontFamily: "var(--font-family-title)",
+                  fontWeight: 900,
+                  fontSize: "0.82rem",
+                  padding: "0.55rem 1rem",
+                  borderRadius: "6px",
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 0 15px rgba(255, 215, 0, 0.4)",
+                  letterSpacing: "0.02em"
+                }}
+              >
+                🎁 CLAIM 1,000 $ BONUS
+              </button>
+
               <button 
                 id="btn-auth-trigger" 
                 className={styles.authBtn} 
                 onClick={() => { setIsAuthOpen(true); sound.playClick(); }}
               >
-                SAVE / REGISTER
+                SIGN IN
               </button>
             </div>
           )}

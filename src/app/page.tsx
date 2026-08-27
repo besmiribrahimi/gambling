@@ -20,6 +20,7 @@ import BigWinCelebration from "../components/BigWinCelebration";
 import AuthModal from "../components/AuthModal";
 import UserSettingsModal from "../components/UserSettingsModal";
 import AdminModal from "../components/AdminModal";
+import LiveToastAlerts from "../components/LiveToastAlerts";
 import sound from "../lib/sound";
 import styles from "./page.module.css";
 
@@ -40,7 +41,7 @@ type CategoryFilter = "all" | "originals" | "table" | "esports" | "community";
 function DashboardContent() {
   const [activeTab, setActiveTab] = useState<TabId>("crash");
   const [category, setCategory] = useState<CategoryFilter>("all");
-  const { wagerHistory, rakebackBalance, vipTier, resetAllData, isSettingsOpen, setIsSettingsOpen, isAdminOpen, setIsAdminOpen } = useWallet();
+  const { user, setIsAuthOpen, wagerHistory, rakebackBalance, vipTier, resetAllData, isSettingsOpen, setIsSettingsOpen, isAdminOpen, setIsAdminOpen } = useWallet();
 
   // Statistics Calculations
   const completedWagers = wagerHistory.filter((w) => w.result !== "pending");
@@ -114,8 +115,56 @@ function DashboardContent() {
       <ProvablyFairModal />
       <BigWinCelebration />
       <CommunityChat />
+      <LiveToastAlerts />
 
       <main className={styles.main}>
+        {/* Guest Preview Mode Alert Banner */}
+        {!user && (
+          <div style={{
+            background: "linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(0, 240, 255, 0.08) 100%)",
+            border: "1px solid rgba(255, 215, 0, 0.35)",
+            borderRadius: "10px",
+            padding: "1.1rem 1.5rem",
+            marginBottom: "1.5rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "1rem",
+            boxShadow: "0 0 25px rgba(255, 215, 0, 0.12)"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+              <span style={{ fontSize: "2rem" }}>🎁</span>
+              <div>
+                <h3 style={{ fontFamily: "var(--font-family-title)", fontSize: "1.05rem", fontWeight: 800, color: "#ffd700", margin: 0 }}>
+                  GUEST PREVIEW MODE — UNLOCK REAL BETTING
+                </h3>
+                <p style={{ fontSize: "0.82rem", color: "var(--color-text-secondary)", marginTop: "0.25rem", margin: 0 }}>
+                  Create a free permanent account in 10 seconds to unlock all 8 games and get your <strong style={{ color: "#fff" }}>1,000 $ War Bonds</strong> starting bonus!
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => { setIsAuthOpen(true); sound.playClick(); }}
+              style={{
+                background: "linear-gradient(135deg, #ffd700 0%, #ff8c00 100%)",
+                color: "#000",
+                fontFamily: "var(--font-family-title)",
+                fontSize: "0.82rem",
+                fontWeight: 900,
+                padding: "0.6rem 1.3rem",
+                borderRadius: "6px",
+                border: "none",
+                cursor: "pointer",
+                boxShadow: "0 4px 14px rgba(255, 215, 0, 0.35)",
+                letterSpacing: "0.03em"
+              }}
+            >
+              CLAIM 1,000 $ BONUS
+            </button>
+          </div>
+        )}
+
         {/* Top Header & Category Filter Navigation */}
         <div className={styles.topBanner}>
           <h1 className={styles.mainTitle}>CLASHWAGER CASINO & ESPORTS ARENA</h1>

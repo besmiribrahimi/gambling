@@ -187,20 +187,13 @@ export const AuthModal: React.FC = () => {
           </span>
         </div>
 
-        <div style={{ marginTop: "1rem", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <button
-            type="button"
-            onClick={() => { setIsAuthOpen(false); setIsAdminOpen(true); }}
-            style={{ background: "transparent", border: "none", color: "#ff0055", fontSize: "0.72rem", fontWeight: 800, cursor: "pointer" }}
-          >
-            🔒 Administrator Access Portal
-          </button>
+        <div style={{ marginTop: "1rem", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "0.75rem", display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
           <button
             type="button"
             onClick={() => setIsAuthOpen(false)}
             style={{ background: "transparent", border: "none", color: "var(--color-text-muted)", fontSize: "0.75rem", cursor: "pointer" }}
           >
-            Cancel
+            Close ✕
           </button>
         </div>
       </div>
