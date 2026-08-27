@@ -1,48 +1,113 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useWallet } from "../context/WalletContext";
+import sound from "../lib/sound";
 import styles from "./leaderboard.module.css";
 
 interface LeaderboardEntry {
   name: string;
+  vipTier: string;
+  vipBadge: string;
   balance: number;
   wagersWon: number;
+  biggestMultiplier: number;
   isUser?: boolean;
 }
 
 const MOCK_PLAYERS: LeaderboardEntry[] = [
-  { name: "shroud", balance: 14200, wagersWon: 84 },
-  { name: "Faker", balance: 9850, wagersWon: 112 },
-  { name: "s1mple", balance: 6400, wagersWon: 45 },
-  { name: "TenZ", balance: 4100, wagersWon: 52 },
-  { name: "Clix", balance: 2500, wagersWon: 30 },
-  { name: "Mongraal", balance: 1800, wagersWon: 19 },
-  { name: "Pokimane", balance: 950, wagersWon: 11 },
-  { name: "Ninja", balance: 500, wagersWon: 5 }
+  { name: "shroud", vipTier: "Obsidian", vipBadge: "🔥", balance: 42500, wagersWon: 142, biggestMultiplier: 125.0 },
+  { name: "Faker", vipTier: "Diamond", vipBadge: "👑", balance: 28950, wagersWon: 118, biggestMultiplier: 76.0 },
+  { name: "s1mple", vipTier: "Platinum", vipBadge: "💎", balance: 18400, wagersWon: 85, biggestMultiplier: 42.0 },
+  { name: "TenZ", vipTier: "Platinum", vipBadge: "💎", balance: 14100, wagersWon: 62, biggestMultiplier: 33.0 },
+  { name: "Clix", vipTier: "Gold", vipBadge: "🥇", balance: 8500, wagersWon: 45, biggestMultiplier: 22.0 },
+  { name: "Mongraal", vipTier: "Gold", vipBadge: "🥇", balance: 5800, wagersWon: 31, biggestMultiplier: 18.0 },
+  { name: "Pokimane", vipTier: "Silver", vipBadge: "🥈", balance: 2950, wagersWon: 19, biggestMultiplier: 14.0 },
+  { name: "Ninja", vipTier: "Bronze", vipBadge: "🥉", balance: 1500, wagersWon: 12, biggestMultiplier: 6.0 }
 ];
 
 export const Leaderboard: React.FC = () => {
-  const { balance, wagerHistory } = useWallet();
+  const { balance, wagerHistory, user, vipTier } = useWallet();
+  const [sortKey, setSortKey] = useState<"balance" | "wagersWon" | "biggestMultiplier">("balance");
 
-  // Count player's won wagers
+  // Calculate user stats
   const playerWins = wagerHistory.filter((w) => w.result === "win").length;
+  const playerBiggestMult = wagerHistory.reduce((max, w) => {
+    if (w.result === "win" && w.amount > 0) {
+      const m = w.payout / w.amount;
+      return m > max ? m : max;
+    }
+    return max;
+  }, 1.0);
 
-  // Append user dynamically
+  const userName = user ? user.username : "You (Player)";
+
   const leaderboardData: LeaderboardEntry[] = [
     ...MOCK_PLAYERS,
-    { name: "You (Player)", balance, wagersWon: playerWins, isUser: true }
+    {
+      name: userName,
+      vipTier: vipTier.name,
+      vipBadge: vipTier.badge,
+      balance,
+      wagersWon: playerWins,
+      biggestMultiplier: parseFloat(playerBiggestMult.toFixed(1)),
+      isUser: true
+    }
   ];
 
-  // Sort by balance desc
-  leaderboardData.sort((a, b) => b.balance - a.balance);
+  leaderboardData.sort((a, b) => b[sortKey] - a[sortKey]);
 
   return (
     <div className={styles.container}>
       <div className={styles.titleRow}>
         <div>
-          <h2 className={styles.title}>Top Community Leaderboard</h2>
-          <span className={styles.subtitle}>Rankings are calculated dynamically in real-time</span>
+          <h2 className={styles.title}>🏆 Community Hall of Fame</h2>
+          <span className={styles.subtitle}>Rankings update in real-time based on high-roller performances</span>
+        </div>
+
+        <div style={{ display: "flex", gap: "0.4rem" }}>
+          <button
+            onClick={() => { setSortKey("balance"); sound.playClick(); }}
+            style={{
+              padding: "0.4rem 0.8rem",
+              borderRadius: "6px",
+              fontFamily: "var(--font-family-title)",
+              fontSize: "0.75rem",
+              fontWeight: 800,
+              background: sortKey === "balance" ? "var(--color-primary)" : "rgba(255,255,255,0.05)",
+              color: sortKey === "balance" ? "#000" : "#fff"
+            }}
+          >
+            Highest Balance
+          </button>
+          <button
+            onClick={() => { setSortKey("wagersWon"); sound.playClick(); }}
+            style={{
+              padding: "0.4rem 0.8rem",
+              borderRadius: "6px",
+              fontFamily: "var(--font-family-title)",
+              fontSize: "0.75rem",
+              fontWeight: 800,
+              background: sortKey === "wagersWon" ? "var(--color-primary)" : "rgba(255,255,255,0.05)",
+              color: sortKey === "wagersWon" ? "#000" : "#fff"
+            }}
+          >
+            Most Wins
+          </button>
+          <button
+            onClick={() => { setSortKey("biggestMultiplier"); sound.playClick(); }}
+            style={{
+              padding: "0.4rem 0.8rem",
+              borderRadius: "6px",
+              fontFamily: "var(--font-family-title)",
+              fontSize: "0.75rem",
+              fontWeight: 800,
+              background: sortKey === "biggestMultiplier" ? "var(--color-primary)" : "rgba(255,255,255,0.05)",
+              color: sortKey === "biggestMultiplier" ? "#000" : "#fff"
+            }}
+          >
+            Top Multiplier
+          </button>
         </div>
       </div>
 
@@ -50,9 +115,10 @@ export const Leaderboard: React.FC = () => {
         <thead>
           <tr>
             <th>Rank</th>
-            <th>Player Name</th>
+            <th>Player & VIP Tier</th>
             <th>Wagers Won</th>
-            <th style={{ textAlign: "right" }}>Wallet Balance</th>
+            <th>Top Multiplier</th>
+            <th style={{ textAlign: "right" }}>War Bonds Balance</th>
           </tr>
         </thead>
         <tbody>
@@ -75,15 +141,20 @@ export const Leaderboard: React.FC = () => {
                 </td>
                 <td>
                   <div className={styles.playerName}>
-                    {player.name}
+                    <span>{player.vipBadge}</span>
+                    <span>{player.name}</span>
+                    <span style={{ fontSize: "0.68rem", color: "var(--color-text-muted)" }}>({player.vipTier})</span>
                     {player.isUser && <span className={styles.userTag}>YOU</span>}
                   </div>
                 </td>
-                <td style={{ color: "var(--color-text-secondary)", fontWeight: "600" }}>
-                  {player.wagersWon}
+                <td style={{ color: "var(--color-text-secondary)", fontWeight: "700" }}>
+                  {player.wagersWon} Wins
+                </td>
+                <td style={{ color: "#ffd700", fontWeight: "800", fontFamily: "var(--font-family-title)" }}>
+                  {player.biggestMultiplier}x
                 </td>
                 <td className={styles.balance} style={{ textAlign: "right" }}>
-                  {player.balance.toLocaleString()} War Bonds
+                  {player.balance.toLocaleString()} $
                 </td>
               </tr>
             );
@@ -93,4 +164,5 @@ export const Leaderboard: React.FC = () => {
     </div>
   );
 };
+
 export default Leaderboard;

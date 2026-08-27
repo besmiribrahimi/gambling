@@ -33,7 +33,7 @@ export async function POST(request: Request) {
 
     if (user.isBanned) {
       return NextResponse.json(
-        { error: "Your account has been banned." },
+        { error: "Your account has been banned by the Administrator." },
         { status: 403 }
       );
     }
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Set secure cookie
+    // Set secure user session cookie
     const token = encryptSession(user.id);
     const cookieStore = await cookies();
     cookieStore.set("cw_session", token, {
@@ -55,6 +55,17 @@ export async function POST(request: Request) {
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: "/"
     });
+
+    // If logging in as an admin account, grant admin session automatically as well
+    if (user.role === "admin") {
+      const adminToken = encryptSession("clashwager_admin_authorized");
+      cookieStore.set("cw_admin_session", adminToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 60 * 60 * 4, // 4 hours
+        path: "/"
+      });
+    }
 
     const { passwordHash, ...userResponse } = user;
 

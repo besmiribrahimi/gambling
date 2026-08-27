@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import useWager from "../hooks/useWager";
+import sound from "../lib/sound";
 import styles from "./slots.module.css";
 
 const SLOT_SYMBOLS = ["7️⃣", "💎", "⭐", "🍒", "🍋", "🍉"];
@@ -12,136 +13,165 @@ interface SymbolPay {
 }
 
 const PAYTABLE: SymbolPay[] = [
-  { symbol: "7️⃣", payout3: 30 },
-  { symbol: "💎", payout3: 15 },
-  { symbol: "⭐", payout3: 10 },
-  { symbol: "🍒", payout3: 5 },
-  { symbol: "🍋", payout3: 3 },
-  { symbol: "🍉", payout3: 2 }
+  { symbol: "7️⃣", payout3: 35 },
+  { symbol: "💎", payout3: 20 },
+  { symbol: "⭐", payout3: 12 },
+  { symbol: "🍒", payout3: 6 },
+  { symbol: "🍋", payout3: 4 },
+  { symbol: "🍉", payout3: 2.5 }
 ];
 
 export const GameSlots: React.FC = () => {
   const { balance, placeWager, resolveWager } = useWager();
-  const [betAmount, setBetAmount] = useState<string>("10");
+  const [betAmount, setBetAmount] = useState<string>("50");
+  const [reelCount, setReelCount] = useState<3 | 5>(3);
   const [reels, setReels] = useState<string[]>(["7️⃣", "7️⃣", "7️⃣"]);
   const [isSpinning, setIsSpinning] = useState<boolean>(false);
-  const [spinningReels, setSpinningReels] = useState<boolean[]>([false, false, false]);
+  const [spinningReels, setSpinningReels] = useState<boolean[]>([false, false, false, false, false]);
+  const [autoSpinsRemaining, setAutoSpinsRemaining] = useState<number>(0);
   const [alertMsg, setAlertMsg] = useState<{ text: string; isError: boolean } | null>(null);
   const [flashWin, setFlashWin] = useState(false);
 
-  const spinIntervalRefs = useRef<(NodeJS.Timeout | null)[]>([null, null, null]);
-  const stopTimeoutRefs = useRef<(NodeJS.Timeout | null)[]>([null, null, null]);
+  const spinIntervalRefs = useRef<(NodeJS.Timeout | null)[]>([null, null, null, null, null]);
+  const stopTimeoutRefs = useRef<(NodeJS.Timeout | null)[]>([null, null, null, null, null]);
+  const isSpinningRef = useRef(isSpinning);
+  isSpinningRef.current = isSpinning;
 
   useEffect(() => {
     return () => {
-      // Cleanup all timers on unmount
       spinIntervalRefs.current.forEach((ref) => ref && clearInterval(ref));
       stopTimeoutRefs.current.forEach((ref) => ref && clearTimeout(ref));
     };
   }, []);
 
-  const handleMaxWager = () => {
-    setBetAmount(balance.toString());
+  const handleReelCountChange = (count: 3 | 5) => {
+    if (isSpinning) return;
+    setReelCount(count);
+    if (count === 3) {
+      setReels(["7️⃣", "7️⃣", "7️⃣"]);
+      setSpinningReels([false, false, false, false, false]);
+    } else {
+      setReels(["7️⃣", "7️⃣", "7️⃣", "7️⃣", "7️⃣"]);
+      setSpinningReels([false, false, false, false, false]);
+    }
   };
 
-  const handleSpin = () => {
-    if (isSpinning) return;
+  const handleSpin = useCallback(() => {
+    if (isSpinningRef.current) return;
 
     const amt = parseFloat(betAmount);
     if (isNaN(amt) || amt <= 0) {
       setAlertMsg({ text: "Please enter a valid bet amount.", isError: true });
+      setAutoSpinsRemaining(0);
       return;
     }
 
     if (balance < amt) {
       setAlertMsg({ text: "Insufficient War Bonds balance.", isError: true });
+      setAutoSpinsRemaining(0);
       return;
     }
 
-    // Place bet using hook
     const placed = placeWager(amt);
-    if (!placed) return;
+    if (!placed) {
+      setAutoSpinsRemaining(0);
+      return;
+    }
 
-    // Reset alert and trigger spinning state
+    sound.playChip();
     setAlertMsg(null);
     setIsSpinning(true);
-    setSpinningReels([true, true, true]);
 
-    // Choose final result symbols beforehand to resolve wagers on server-level consistency
-    const finalResult = [
-      SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)],
-      SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)],
-      SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)]
-    ];
+    const count = reelCount;
+    setSpinningReels(Array(count).fill(true));
 
-    // Reel 1 spin interval
-    spinIntervalRefs.current[0] = setInterval(() => {
-      setReels((prev) => [
-        SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)],
-        prev[1],
-        prev[2]
-      ]);
-    }, 75);
+    // Generate random target results
+    const finalResult: string[] = [];
+    for (let i = 0; i < count; i++) {
+      finalResult.push(SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)]);
+    }
 
-    // Reel 2 spin interval
-    spinIntervalRefs.current[1] = setInterval(() => {
-      setReels((prev) => [
-        prev[0],
-        SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)],
-        prev[2]
-      ]);
-    }, 75);
+    // Start interval animations
+    for (let i = 0; i < count; i++) {
+      const idx = i;
+      spinIntervalRefs.current[idx] = setInterval(() => {
+        setReels((prev) => {
+          const next = [...prev];
+          next[idx] = SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)];
+          return next;
+        });
+        sound.playSlotTick();
+      }, 70 + idx * 10);
+    }
 
-    // Reel 3 spin interval
-    spinIntervalRefs.current[2] = setInterval(() => {
-      setReels((prev) => [
-        prev[0],
-        prev[1],
-        SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)]
-      ]);
-    }, 75);
+    // Stagger stops
+    for (let i = 0; i < count; i++) {
+      const idx = i;
+      const delay = 900 + idx * 350;
 
-    // Staggered stop timers
-    // Reel 1 stops at 1000ms
-    stopTimeoutRefs.current[0] = setTimeout(() => {
-      if (spinIntervalRefs.current[0]) clearInterval(spinIntervalRefs.current[0]);
-      setSpinningReels((prev) => [false, prev[1], prev[2]]);
-      setReels((prev) => [finalResult[0], prev[1], prev[2]]);
-    }, 1000);
+      stopTimeoutRefs.current[idx] = setTimeout(() => {
+        if (spinIntervalRefs.current[idx]) clearInterval(spinIntervalRefs.current[idx]!);
+        
+        sound.playSlotStop();
 
-    // Reel 2 stops at 1350ms
-    stopTimeoutRefs.current[1] = setTimeout(() => {
-      if (spinIntervalRefs.current[1]) clearInterval(spinIntervalRefs.current[1]);
-      setSpinningReels((prev) => [prev[0], false, prev[2]]);
-      setReels((prev) => [finalResult[0], finalResult[1], prev[2]]);
-    }, 1350);
+        setSpinningReels((prev) => {
+          const next = [...prev];
+          next[idx] = false;
+          return next;
+        });
 
-    // Reel 3 stops at 1700ms
-    stopTimeoutRefs.current[2] = setTimeout(() => {
-      if (spinIntervalRefs.current[2]) clearInterval(spinIntervalRefs.current[2]);
-      setSpinningReels([false, false, false]);
-      setReels(finalResult);
-      setIsSpinning(false);
+        setReels((prev) => {
+          const next = [...prev];
+          next[idx] = finalResult[idx];
+          return next;
+        });
 
-      resolveSlotsWager(amt, finalResult);
-    }, 1700);
-  };
+        // If last reel stopped
+        if (idx === count - 1) {
+          setIsSpinning(false);
+          resolveSlotsWager(amt, finalResult);
+
+          // Handle Auto-Spin continuation
+          setAutoSpinsRemaining((prev) => {
+            if (prev > 1) {
+              setTimeout(() => {
+                handleSpin();
+              }, 800);
+              return prev - 1;
+            }
+            return 0;
+          });
+        }
+      }, delay);
+    }
+  }, [betAmount, balance, reelCount, placeWager]);
 
   const resolveSlotsWager = (amt: number, resultSymbols: string[]) => {
-    const [s1, s2, s3] = resultSymbols;
     let didWin = false;
     let multiplier = 0;
 
-    // Check 3 matching
-    if (s1 === s2 && s2 === s3) {
+    const count = resultSymbols.length;
+
+    // Check all matching
+    const allMatch = resultSymbols.every((s) => s === resultSymbols[0]);
+    if (allMatch) {
       didWin = true;
-      const payInfo = PAYTABLE.find((p) => p.symbol === s1);
-      multiplier = payInfo ? payInfo.payout3 : 1;
-    }
-    // Check 2 matching
-    else if (s1 === s2 || s2 === s3 || s1 === s3) {
-      didWin = true;
-      multiplier = 1.5;
+      const payInfo = PAYTABLE.find((p) => p.symbol === resultSymbols[0]);
+      const base = payInfo ? payInfo.payout3 : 10;
+      multiplier = count === 5 ? base * 3 : base;
+    } else {
+      // Count duplicates
+      const freq: Record<string, number> = {};
+      resultSymbols.forEach((s) => { freq[s] = (freq[s] || 0) + 1; });
+      const maxFreq = Math.max(...Object.values(freq));
+
+      if (count === 3 && maxFreq === 2) {
+        didWin = true;
+        multiplier = 1.5;
+      } else if (count === 5 && maxFreq >= 3) {
+        didWin = true;
+        multiplier = maxFreq === 4 ? 8 : maxFreq === 3 ? 2.5 : 1.5;
+      }
     }
 
     const payout = didWin ? Math.round(amt * multiplier) : 0;
@@ -149,8 +179,10 @@ export const GameSlots: React.FC = () => {
     if (didWin) {
       setFlashWin(true);
       setTimeout(() => setFlashWin(false), 2000);
+      sound.playWin();
+
       setAlertMsg({
-        text: `Jackpot! Landed [${s1} ${s2} ${s3}]. Won +${payout} War Bonds! (${multiplier}x multiplier)`,
+        text: `Jackpot Hit! [${resultSymbols.join(" ")}] • Won +${payout} War Bonds (${multiplier}x)!`,
         isError: false
       });
       resolveWager(
@@ -158,11 +190,11 @@ export const GameSlots: React.FC = () => {
         payout,
         true,
         "slots",
-        `Won Slots: landed [${s1} ${s2} ${s3}] matching combination (Multiplier: ${multiplier}x)`
+        `Won Slots: [${resultSymbols.join(" ")}] (${multiplier}x multiplier)`
       );
     } else {
       setAlertMsg({
-        text: `Landed [${s1} ${s2} ${s3}]. Better luck next spin!`,
+        text: `[${resultSymbols.join(" ")}] • Better luck next spin!`,
         isError: true
       });
       resolveWager(
@@ -170,9 +202,27 @@ export const GameSlots: React.FC = () => {
         0,
         false,
         "slots",
-        `Lost Slots: landed [${s1} ${s2} ${s3}] non-matching reels`
+        `Lost Slots: [${resultSymbols.join(" ")}]`
       );
     }
+  };
+
+  const handleStartAutoSpin = (spins: number) => {
+    if (isSpinning) return;
+    setAutoSpinsRemaining(spins);
+    handleSpin();
+  };
+
+  const handleStopAutoSpin = () => {
+    setAutoSpinsRemaining(0);
+  };
+
+  const handleAddChip = (val: number) => {
+    if (isSpinning) return;
+    const cur = parseInt(betAmount || "0");
+    const next = isNaN(cur) ? val : cur + val;
+    setBetAmount(Math.min(next, balance).toString());
+    sound.playChip();
   };
 
   return (
@@ -181,25 +231,64 @@ export const GameSlots: React.FC = () => {
         
         {/* Reels Arena */}
         <div className={`${styles.slotsArena} ${flashWin ? "flashWinner" : ""}`}>
-          <div className={styles.reelsContainer}>
-            <div className={`${styles.reel} ${spinningReels[0] ? styles.spinning : ""}`}>
-              {reels[0]}
-            </div>
-            <div className={`${styles.reel} ${spinningReels[1] ? styles.spinning : ""}`}>
-              {reels[1]}
-            </div>
-            <div className={`${styles.reel} ${spinningReels[2] ? styles.spinning : ""}`}>
-              {reels[2]}
-            </div>
+          <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+            <button
+              onClick={() => handleReelCountChange(3)}
+              disabled={isSpinning}
+              style={{
+                padding: "0.4rem 0.8rem",
+                borderRadius: "6px",
+                fontFamily: "var(--font-family-title)",
+                fontWeight: 800,
+                fontSize: "0.75rem",
+                background: reelCount === 3 ? "var(--color-primary)" : "rgba(255,255,255,0.06)",
+                color: reelCount === 3 ? "#000" : "#fff"
+              }}
+            >
+              Classic 3-Reel
+            </button>
+            <button
+              onClick={() => handleReelCountChange(5)}
+              disabled={isSpinning}
+              style={{
+                padding: "0.4rem 0.8rem",
+                borderRadius: "6px",
+                fontFamily: "var(--font-family-title)",
+                fontWeight: 800,
+                fontSize: "0.75rem",
+                background: reelCount === 5 ? "#ffaa00" : "rgba(255,255,255,0.06)",
+                color: reelCount === 5 ? "#000" : "#fff"
+              }}
+            >
+              Deluxe 5-Reel 🔥
+            </button>
+          </div>
+
+          <div
+            className={styles.reelsContainer}
+            style={{
+              gridTemplateColumns: `repeat(${reelCount}, 1fr)`,
+              maxWidth: reelCount === 5 ? "500px" : "360px"
+            }}
+          >
+            {reels.map((sym, idx) => (
+              <div
+                key={idx}
+                className={`${styles.reel} ${spinningReels[idx] ? styles.spinning : ""}`}
+                style={{ fontSize: reelCount === 5 ? "2.4rem" : "3.2rem" }}
+              >
+                {sym}
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Wager Panel */}
         <div className={styles.wagerPanel}>
           <div>
-            <h2 className={styles.title}>Trench Slots</h2>
+            <h2 className={styles.title}>Trench Slots Deluxe</h2>
             <p className={styles.subtitle}>
-              Pull the lever and spin the reels. Claim multipliers for matching symbols.
+              Pull the lever and line up high-paying symbols. Match all reels for massive jackpot multipliers.
             </p>
           </div>
 
@@ -218,19 +307,67 @@ export const GameSlots: React.FC = () => {
                 value={betAmount}
                 onChange={(e) => setBetAmount(e.target.value)}
               />
-              <button disabled={isSpinning} className={styles.maxBtn} onClick={handleMaxWager}>
+              <button disabled={isSpinning} className={styles.maxBtn} onClick={() => setBetAmount(balance.toString())}>
                 MAX
               </button>
             </div>
+
+            {/* Chips Shortcuts */}
+            {!isSpinning && (
+              <div style={{ display: "flex", gap: "0.4rem", justifyContent: "center", marginTop: "0.4rem" }}>
+                <button className="casino-chip chip-white" onClick={() => handleAddChip(10)}>10</button>
+                <button className="casino-chip chip-red" onClick={() => handleAddChip(50)}>50</button>
+                <button className="casino-chip chip-blue" onClick={() => handleAddChip(100)}>100</button>
+                <button className="casino-chip chip-purple" onClick={() => handleAddChip(500)}>500</button>
+                <button className="casino-chip chip-gold" onClick={() => handleAddChip(1000)}>1k</button>
+              </div>
+            )}
           </div>
 
-          <button
-            disabled={isSpinning || !betAmount}
-            className={styles.spinBtn}
-            onClick={handleSpin}
-          >
-            {isSpinning ? "Spinning Reels..." : "Pull Lever"}
-          </button>
+          {autoSpinsRemaining > 0 ? (
+            <button
+              className={styles.spinBtn}
+              style={{ background: "var(--color-danger)", color: "#fff" }}
+              onClick={handleStopAutoSpin}
+            >
+              Stop Auto-Spin ({autoSpinsRemaining} left)
+            </button>
+          ) : (
+            <button
+              disabled={isSpinning || !betAmount}
+              className={styles.spinBtn}
+              onClick={handleSpin}
+            >
+              {isSpinning ? "Spinning Reels..." : `Pull Lever (${betAmount || 0} $)`}
+            </button>
+          )}
+
+          {/* Auto-spin quick buttons */}
+          {autoSpinsRemaining === 0 && !isSpinning && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.4rem" }}>
+              <button
+                className={styles.maxBtn}
+                style={{ padding: "0.5rem" }}
+                onClick={() => handleStartAutoSpin(10)}
+              >
+                Auto 10x
+              </button>
+              <button
+                className={styles.maxBtn}
+                style={{ padding: "0.5rem" }}
+                onClick={() => handleStartAutoSpin(25)}
+              >
+                Auto 25x
+              </button>
+              <button
+                className={styles.maxBtn}
+                style={{ padding: "0.5rem" }}
+                onClick={() => handleStartAutoSpin(50)}
+              >
+                Auto 50x
+              </button>
+            </div>
+          )}
 
           {/* Feedback alerts */}
           {alertMsg && (
@@ -255,8 +392,8 @@ export const GameSlots: React.FC = () => {
                 </div>
               ))}
               <div className={styles.paytableRow} style={{ gridColumn: "span 2", borderColor: "rgba(255, 170, 0, 0.25)" }}>
-                <span className={styles.paySymbols}>Any 2 Matching Symbols</span>
-                <span className={styles.payMult} style={{ color: "var(--color-success)" }}>1.5x</span>
+                <span className={styles.paySymbols}>Any Partial Matches</span>
+                <span className={styles.payMult} style={{ color: "var(--color-success)" }}>1.5x - 8x</span>
               </div>
             </div>
           </div>

@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useWallet } from "../context/WalletContext";
+import sound from "../lib/sound";
 import styles from "./crash.module.css";
 
 interface Star {
@@ -24,8 +25,9 @@ interface Particle {
 export const GameCrash: React.FC = () => {
   const { balance, setBalance, addTransaction } = useWallet();
   const [gameState, setGameState] = useState<"idle" | "countdown" | "flying" | "crashed">("idle");
-  const [countdown, setCountdown] = useState(5);
+  const [countdown, setCountdown] = useState(4);
   const [wager, setWager] = useState<string>("100");
+  const [autoCashout, setAutoCashout] = useState<string>("2.00");
   const [multiplier, setMultiplier] = useState(1.0);
   const [crashPoint, setCrashPoint] = useState(0);
   const [hasBet, setHasBet] = useState(false);
@@ -37,7 +39,7 @@ export const GameCrash: React.FC = () => {
   const [isScanningPredictor, setIsScanningPredictor] = useState(false);
   const [terminalLines, setTerminalLines] = useState<string[]>([
     "[sys] connection established",
-    "[sys] listening to game entropy..."
+    "[sys] telemetry radar online..."
   ]);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -47,21 +49,34 @@ export const GameCrash: React.FC = () => {
   const crashRef = useRef(crashPoint);
   const terminalEndRef = useRef<HTMLDivElement | null>(null);
 
-  // Sync refs to avoid stale closures in animation frame
+  // Keep refs in sync
   useEffect(() => { stateRef.current = gameState; }, [gameState]);
   useEffect(() => { multiplierRef.current = multiplier; }, [multiplier]);
   useEffect(() => { crashRef.current = crashPoint; }, [crashPoint]);
 
-  // Scroll terminal to bottom
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [terminalLines]);
 
-  // Handle game loop timer transitions
+  const startGameFlight = useCallback(() => {
+    const r = Math.random();
+    let point = 1.0;
+    if (r >= 0.04) {
+      point = parseFloat((1.01 + Math.exp(Math.random() * 3.4) / 10).toFixed(2));
+      if (point > 100) point = 100;
+    }
+    
+    setCrashPoint(point);
+    setMultiplier(1.0);
+    setCashedOut(false);
+    setGameState("flying");
+  }, []);
+
+  // Countdown timer cycle
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (gameState === "countdown") {
-      setCountdown(5);
+      setCountdown(4);
       timer = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
@@ -74,21 +89,7 @@ export const GameCrash: React.FC = () => {
       }, 1000);
     }
     return () => clearInterval(timer);
-  }, [gameState]);
-
-  const startGameFlight = () => {
-    const r = Math.random();
-    let point = 1.0;
-    if (r >= 0.05) {
-      point = parseFloat((1.01 + Math.exp(Math.random() * 3.5) / 10).toFixed(2));
-      if (point > 100) point = 100;
-    }
-    
-    setCrashPoint(point);
-    setMultiplier(1.0);
-    setCashedOut(false);
-    setGameState("flying");
-  };
+  }, [gameState, startGameFlight]);
 
   const handlePlaceBet = () => {
     const betAmount = parseInt(wager);
@@ -101,46 +102,50 @@ export const GameCrash: React.FC = () => {
       return;
     }
 
-    setBalance(balance - betAmount);
+    setBalance((prev) => prev - betAmount);
     setHasBet(true);
     setAlertMsg(null);
     setGameState("countdown");
+    sound.playChip();
   };
 
-  const handleCashOut = () => {
+  const handleCashOut = useCallback(() => {
     if (gameState !== "flying" || !hasBet || cashedOut) return;
 
     const betAmount = parseInt(wager);
-    const winAmt = Math.round(betAmount * multiplierRef.current);
+    const currentMult = multiplierRef.current;
+    const winAmt = Math.round(betAmount * currentMult);
     
-    setBalance(balance + winAmt);
+    setBalance((prev) => prev + winAmt);
     setCashedOut(true);
     
     addTransaction(
       "crash",
-      `Cashed out Crash at ${multiplierRef.current.toFixed(2)}x`,
+      `Cashed out Crash at ${currentMult.toFixed(2)}x`,
       betAmount,
       "win",
       winAmt
     );
 
-    setAlertMsg({ text: `Successfully Cashed Out: +${winAmt} War Bonds!`, isError: false });
-  };
+    setAlertMsg({ text: `Cashed Out: +${winAmt} War Bonds (${currentMult.toFixed(2)}x)!`, isError: false });
+    sound.playWin();
+  }, [gameState, hasBet, cashedOut, wager, setBalance, addTransaction]);
 
-  const triggerCrash = (finalMultiplier: number) => {
+  const triggerCrash = useCallback((finalMultiplier: number) => {
     setGameState("crashed");
-    setHistory((prev) => [finalMultiplier, ...prev.slice(0, 4)]);
+    setHistory((prev) => [finalMultiplier, ...prev.slice(0, 5)]);
+    sound.playExplosion();
 
     if (hasBet && !cashedOut) {
       const betAmount = parseInt(wager);
       addTransaction(
         "crash",
-        `Crashed in game at ${finalMultiplier.toFixed(2)}x`,
+        `Crashed in flight at ${finalMultiplier.toFixed(2)}x`,
         betAmount,
         "lose",
         0
       );
-      setAlertMsg({ text: `Crashed! Lost ${betAmount} War Bonds`, isError: true });
+      setAlertMsg({ text: `Rocket Crashed at ${finalMultiplier.toFixed(2)}x!`, isError: true });
     }
 
     setHasBet(false);
@@ -149,10 +154,10 @@ export const GameCrash: React.FC = () => {
       setGameState("idle");
       setMultiplier(1.0);
       setAlertMsg(null);
-    }, 4000);
-  };
+    }, 3800);
+  }, [hasBet, cashedOut, wager, addTransaction]);
 
-  // Kalish Predictor Run exploit
+  // Kalish Predictor
   const handlePredictorScan = () => {
     if (isScanningPredictor) return;
     if (balance < 10) {
@@ -160,44 +165,33 @@ export const GameCrash: React.FC = () => {
       return;
     }
 
-    // Deduct scan fee
     setBalance((prev) => prev - 10);
     setIsScanningPredictor(true);
-    setTerminalLines((prev) => [...prev, "[scan] initiating quantum scan... (-10 $)"]);
-
-    // Sequence printing steps
-    setTimeout(() => {
-      setTerminalLines((prev) => [...prev, "[scan] reading flight entropy vectors..."]);
-    }, 4000/10);
+    setTerminalLines((prev) => [...prev, "[scan] decrypting radar vectors... (-10 $)"]);
+    sound.playClick();
 
     setTimeout(() => {
-      setTerminalLines((prev) => [...prev, "[scan] scanning multiplier gradient delta..."]);
-    }, 8000/10);
+      setTerminalLines((prev) => [...prev, "[scan] reading multiplier gradient delta..."]);
+    }, 400);
 
     setTimeout(() => {
-      setTerminalLines((prev) => [...prev, "[scan] calculating crash coefficient..."]);
-    }, 12000/10);
-
-    setTimeout(() => {
-      // Determine prediction
-      let predVal = 1.25;
+      let predVal = 1.35;
       if (stateRef.current === "flying") {
-        // Read actual crashRef but suggest cashout slightly lower to guarantee win
-        predVal = Math.max(1.05, crashRef.current - (Math.random() * 0.15 + 0.05));
+        predVal = Math.max(1.05, crashRef.current - (Math.random() * 0.12 + 0.05));
       } else {
-        // Static mock prediction if idle
         predVal = 1.1 + Math.random() * 3.5;
       }
       
-      const accuracy = Math.floor(Math.random() * 15 + 80); // 80% to 95% mock accuracy
+      const accuracy = Math.floor(Math.random() * 12 + 85);
       
       setTerminalLines((prev) => [
         ...prev,
-        `[hack] target acquired: ~${predVal.toFixed(2)}x`,
+        `[hack] target trajectory: ~${predVal.toFixed(2)}x`,
         `[hack] accuracy probability: ${accuracy}%`
       ]);
       setIsScanningPredictor(false);
-    }, 16000/10);
+      sound.playWin();
+    }, 1200);
   };
 
   // Canvas Animation & Particles
@@ -209,18 +203,16 @@ export const GameCrash: React.FC = () => {
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
+    const width = 600;
+    const height = 440;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
     ctx.scale(dpr, dpr);
 
-    const width = rect.width;
-    const height = rect.height;
-
-    const stars: Star[] = Array.from({ length: 50 }, () => ({
+    const stars: Star[] = Array.from({ length: 45 }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
-      size: Math.random() * 2,
+      size: Math.random() * 2 + 0.5,
       speed: Math.random() * 1.5 + 0.5
     }));
 
@@ -231,15 +223,9 @@ export const GameCrash: React.FC = () => {
     const animate = () => {
       ctx.clearRect(0, 0, width, height);
 
-      const spaceGrad = ctx.createLinearGradient(0, 0, 0, height);
-      spaceGrad.addColorStop(0, "#060913");
-      spaceGrad.addColorStop(1, "#0d1326");
-      ctx.fillStyle = spaceGrad;
-      ctx.fillRect(0, 0, width, height);
-
       const state = stateRef.current;
-
-      const scrollSpeed = state === "flying" ? Math.min(10, multiplierRef.current * 2) : 0.5;
+      const scrollSpeed = state === "flying" ? Math.min(8, multiplierRef.current * 1.8) : 0.4;
+      
       stars.forEach((star) => {
         star.x -= star.speed * scrollSpeed;
         if (star.x < 0) {
@@ -250,6 +236,7 @@ export const GameCrash: React.FC = () => {
         ctx.fillRect(star.x, star.y, star.size, star.size);
       });
 
+      // Grid Lines
       ctx.strokeStyle = "rgba(255, 255, 255, 0.02)";
       ctx.lineWidth = 1;
       const gridSize = 40;
@@ -269,10 +256,11 @@ export const GameCrash: React.FC = () => {
         ctx.stroke();
       }
 
-      const padding = 50;
+      const padding = 45;
       const graphHeight = height - padding * 2;
       const graphWidth = width - padding * 2;
 
+      // Axis
       ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -284,9 +272,14 @@ export const GameCrash: React.FC = () => {
       if (state === "flying") {
         const now = Date.now();
         const elapsed = (now - flightStartTime) / 1000;
-        
         const currentMultiplier = parseFloat((1.0 + Math.pow(1.08, elapsed * 2.2) - 1).toFixed(2));
         
+        // Auto-cashout check
+        const autoVal = parseFloat(autoCashout);
+        if (hasBet && !cashedOut && !isNaN(autoVal) && autoVal > 1.0 && currentMultiplier >= autoVal) {
+          handleCashOut();
+        }
+
         if (currentMultiplier >= crashRef.current) {
           triggerCrash(crashRef.current);
         } else {
@@ -296,10 +289,10 @@ export const GameCrash: React.FC = () => {
         const maxMult = Math.max(2, currentMultiplier);
         
         ctx.beginPath();
-        ctx.strokeStyle = "rgba(0, 240, 255, 0.8)";
-        ctx.shadowColor = "rgba(0, 240, 255, 0.5)";
-        ctx.shadowBlur = 10;
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#00f0ff";
+        ctx.shadowColor = "rgba(0, 240, 255, 0.6)";
+        ctx.shadowBlur = 12;
+        ctx.lineWidth = 3.5;
 
         const pointsCount = 40;
         let lastX = padding;
@@ -308,9 +301,9 @@ export const GameCrash: React.FC = () => {
         ctx.moveTo(padding, height - padding);
         for (let i = 0; i <= pointsCount; i++) {
           const ratio = i / pointsCount;
-          const px = padding + ratio * graphWidth * 0.8;
+          const px = padding + ratio * graphWidth * 0.82;
           const pMult = 1.0 + Math.pow(1.08, ratio * elapsed * 2.2) - 1;
-          const py = (height - padding) - (pMult - 1) * (graphHeight / (maxMult - 0.5));
+          const py = (height - padding) - (pMult - 1) * (graphHeight / (maxMult - 0.4));
           
           if (px <= width - padding && py >= padding) {
             ctx.lineTo(px, py);
@@ -321,68 +314,56 @@ export const GameCrash: React.FC = () => {
         ctx.stroke();
         ctx.shadowBlur = 0;
 
+        // Thrust rocket particles
         for (let i = 0; i < 3; i++) {
           particles.push({
-            x: lastX - 5,
-            y: lastY + 5,
+            x: lastX - 6,
+            y: lastY + 6,
             size: Math.random() * 4 + 2,
             alpha: 1.0,
-            color: Math.random() > 0.5 ? "rgba(0, 240, 255, 0.8)" : "rgba(189, 0, 255, 0.8)",
+            color: Math.random() > 0.4 ? "#00f0ff" : "#ff007a",
             vx: -Math.random() * 4 - 2,
-            vy: Math.random() * 2 - 1 + Math.random() * 2
+            vy: Math.random() * 3 - 1
           });
         }
 
+        // Rocket Ship Icon / Dot
         ctx.fillStyle = "#ffffff";
         ctx.beginPath();
-        ctx.arc(lastX, lastY, 8, 0, Math.PI * 2);
+        ctx.arc(lastX, lastY, 7, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.strokeStyle = "rgba(0, 240, 255, 0.6)";
+        ctx.strokeStyle = "#00f0ff";
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(lastX, lastY, 14 + Math.sin(pulseProgress) * 2, 0, Math.PI * 2);
+        ctx.arc(lastX, lastY, 12 + Math.sin(pulseProgress) * 3, 0, Math.PI * 2);
         ctx.stroke();
         pulseProgress += 0.15;
 
       } else if (state === "crashed") {
-        ctx.fillStyle = "rgba(255, 23, 68, 0.8)";
-        ctx.shadowColor = "rgba(255, 23, 68, 0.6)";
-        ctx.shadowBlur = 30;
-        
+        ctx.fillStyle = "rgba(255, 23, 68, 0.85)";
+        ctx.shadowColor = "#ff1744";
+        ctx.shadowBlur = 35;
         ctx.beginPath();
-        ctx.arc(width * 0.5, height * 0.5, 30 + Math.sin(Date.now() / 50) * 10, 0, Math.PI * 2);
+        ctx.arc(width * 0.5, height * 0.5, 32 + Math.sin(Date.now() / 40) * 12, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
-
       } else {
         flightStartTime = Date.now();
         const startX = padding;
         const startY = height - padding;
-
-        for (let i = 0; i < 1; i++) {
-          particles.push({
-            x: startX,
-            y: startY + 6,
-            size: Math.random() * 3 + 1,
-            alpha: 0.8,
-            color: "rgba(255, 170, 0, 0.8)",
-            vx: -Math.random() * 1 - 0.5,
-            vy: Math.random() * 2 + 1
-          });
-        }
-
-        ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
         ctx.beginPath();
-        ctx.arc(startX, startY, 8, 0, Math.PI * 2);
+        ctx.arc(startX, startY, 7, 0, Math.PI * 2);
         ctx.fill();
       }
 
+      // Render Particles
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.x += p.vx;
         p.y += p.vy;
-        p.alpha -= 0.03;
+        p.alpha -= 0.035;
         
         if (p.alpha <= 0) {
           particles.splice(i, 1);
@@ -405,23 +386,19 @@ export const GameCrash: React.FC = () => {
     return () => {
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
     };
-  }, [gameState]);
+  }, [gameState, autoCashout, hasBet, cashedOut, handleCashOut, triggerCrash]);
 
-  const handleQuickWager = (multiplier: number) => {
+  const handleQuickWager = (mult: number) => {
     const val = parseInt(wager);
     if (!isNaN(val)) {
-      setWager(Math.round(val * multiplier).toString());
+      setWager(Math.max(1, Math.round(val * mult)).toString());
     }
   };
 
-  const handleHalfWager = () => handleQuickWager(0.5);
-  const handleDoubleWager = () => handleQuickWager(2);
-  const handleMaxWager = () => setWager(balance.toString());
-
   return (
     <div className={styles.container}>
-      {/* Flight Viewport */}
-      <div className={`${styles.gameView} ${gameState === "flying" && multiplier > 3.0 ? "blink-slow" : ""}`} style={gameState === "flying" && multiplier > 3.0 ? { border: "1.5px solid var(--color-danger)" } : {}}>
+      {/* Flight Canvas Viewport */}
+      <div className={styles.gameView}>
         <div className={styles.crashHistory}>
           {history.map((val, idx) => (
             <span
@@ -447,7 +424,7 @@ export const GameCrash: React.FC = () => {
               <div style={{ fontSize: "5rem", fontFamily: "var(--font-family-title)", fontWeight: 900, color: "var(--color-warning)", animation: "blinkFast 0.8s infinite" }}>
                 {countdown}
               </div>
-              <span className={styles.statusLabel}>🚀 INITIALIZING BOOSTER</span>
+              <span className={styles.statusLabel}>🚀 INITIALIZING ROCKET LAUNCH</span>
             </>
           )}
 
@@ -456,7 +433,7 @@ export const GameCrash: React.FC = () => {
               <div className={`${styles.multiplierText} ${multiplier > 3.0 ? "blink-fast" : ""}`}>
                 {multiplier.toFixed(2)}x
               </div>
-              <span className={styles.statusLabel}>RISING...</span>
+              <span className={styles.statusLabel}>ASCENDING TO STRATOSPHERE...</span>
             </>
           )}
 
@@ -465,16 +442,16 @@ export const GameCrash: React.FC = () => {
               <div className={`${styles.multiplierText} ${styles.crashedText}`}>
                 {multiplier.toFixed(2)}x
               </div>
-              <span className={styles.statusLabel} style={{ color: "var(--color-danger)", animation: "blinkFast 0.4s infinite" }}>💥 ROCKET CRASHED</span>
+              <span className={styles.statusLabel} style={{ color: "var(--color-danger)" }}>💥 SHIP DETONATED</span>
             </>
           )}
 
           {gameState === "idle" && (
             <>
-              <div className={styles.multiplierText} style={{ color: "var(--color-text-secondary)" }}>
+              <div className={styles.multiplierText} style={{ color: "var(--color-text-muted)" }}>
                 1.00x
               </div>
-              <span className={styles.statusLabel}>Place bet to launch</span>
+              <span className={styles.statusLabel}>Place stake to launch rocket</span>
             </>
           )}
         </div>
@@ -493,21 +470,37 @@ export const GameCrash: React.FC = () => {
                 className={styles.wagerInput}
                 value={wager}
                 onChange={(e) => setWager(e.target.value)}
-                disabled={gameState !== "idle" && gameState !== "countdown"}
+                disabled={gameState !== "idle"}
               />
             </div>
             
             <div className={styles.quickWagerRow}>
-              <button id="btn-crash-quick-half" className={styles.quickBtn} onClick={handleHalfWager} disabled={gameState !== "idle"}>1/2</button>
-              <button id="btn-crash-quick-double" className={styles.quickBtn} onClick={handleDoubleWager} disabled={gameState !== "idle"}>2x</button>
-              <button id="btn-crash-quick-max" className={styles.quickBtn} onClick={handleMaxWager} disabled={gameState !== "idle"}>MAX</button>
-              <button id="btn-crash-quick-min" className={styles.quickBtn} onClick={() => setWager("100")} disabled={gameState !== "idle"}>MIN</button>
+              <button className={styles.quickBtn} onClick={() => handleQuickWager(0.5)} disabled={gameState !== "idle"}>1/2</button>
+              <button className={styles.quickBtn} onClick={() => handleQuickWager(2)} disabled={gameState !== "idle"}>2x</button>
+              <button className={styles.quickBtn} onClick={() => setWager(balance.toString())} disabled={gameState !== "idle"}>MAX</button>
+              <button className={styles.quickBtn} onClick={() => setWager("100")} disabled={gameState !== "idle"}>MIN</button>
+            </div>
+          </div>
+
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>Auto Cashout Multiplier</label>
+            <div className={styles.wagerBox}>
+              <span style={{ color: "var(--color-primary)", marginRight: "0.5rem", fontWeight: "800" }}>x</span>
+              <input
+                type="number"
+                step="0.1"
+                className={styles.wagerInput}
+                value={autoCashout}
+                onChange={(e) => setAutoCashout(e.target.value)}
+                disabled={gameState !== "idle"}
+                placeholder="2.00"
+              />
             </div>
           </div>
 
           <div className={styles.gameStats}>
             <div className={styles.statRow}>
-              <span className={styles.statLabel}>Current Wager:</span>
+              <span className={styles.statLabel}>Current Stake:</span>
               <span className={styles.statValue}>{hasBet ? wager : 0} War Bonds</span>
             </div>
             <div className={styles.statRow}>
@@ -531,8 +524,8 @@ export const GameCrash: React.FC = () => {
           {/* Kalish Predictor Console */}
           <div className={`${styles.predictorSection} ${isScanningPredictor ? styles.predictorActive : ""}`}>
             <div className={styles.predictorHeader}>
-              <span className={`${styles.predictorTitle} ${isScanningPredictor ? "blink-fast" : ""}`}>
-                🕵️‍♂️ KALISH PREDICTOR v3.1
+              <span className={styles.predictorTitle}>
+                🕵️‍♂️ KALISH PREDICTOR v3.2
               </span>
               <span 
                 className="blink-fast" 
@@ -540,7 +533,7 @@ export const GameCrash: React.FC = () => {
                   width: "8px", 
                   height: "8px", 
                   borderRadius: "50%", 
-                  backgroundColor: isScanningPredictor ? "var(--color-success)" : "var(--color-danger)" 
+                  backgroundColor: isScanningPredictor ? "#00ff6e" : "var(--color-danger)" 
                 }} 
               />
             </div>
@@ -558,28 +551,28 @@ export const GameCrash: React.FC = () => {
               onClick={handlePredictorScan}
               disabled={isScanningPredictor}
             >
-              {isScanningPredictor ? "Decrypting Entropy..." : "Scan Signal (10 $)"}
+              {isScanningPredictor ? "Scanning Entropy..." : "Scan Signal (10 $)"}
             </button>
           </div>
         </div>
 
-        <div style={{ marginTop: "1rem" }}>
+        <div>
           {gameState === "idle" && (
             <button id="btn-crash-place-bet" className={`${styles.actionBtn} ${styles.placeBet}`} onClick={handlePlaceBet}>
-              Place Bet
+              Launch Rocket (${wager || 0})
             </button>
           )}
 
           {gameState === "countdown" && (
             <button className={`${styles.actionBtn} ${styles.waitingState}`} disabled>
-              Waiting for Launch ({countdown}s)
+              Launch in {countdown}s...
             </button>
           )}
 
           {gameState === "flying" && (
             hasBet && !cashedOut ? (
               <button id="btn-crash-cashout" className={`${styles.actionBtn} ${styles.cashOut}`} onClick={handleCashOut}>
-                Cash Out ({Math.round(parseInt(wager) * multiplier)} $)
+                Cash Out (+{Math.round(parseInt(wager) * multiplier)} $)
               </button>
             ) : cashedOut ? (
               <button className={`${styles.actionBtn} ${styles.cashedOutState}`} disabled>
@@ -587,14 +580,14 @@ export const GameCrash: React.FC = () => {
               </button>
             ) : (
               <button className={`${styles.actionBtn} ${styles.waitingState}`} disabled>
-                Watching Flight
+                Observing Flight
               </button>
             )
           )}
 
           {gameState === "crashed" && (
-            <button className={`${styles.actionBtn} ${styles.waitingState}`} disabled style={{ borderColor: "rgba(255,23,68,0.3)" }}>
-              CRASHED AT {multiplier.toFixed(2)}x
+            <button className={`${styles.actionBtn} ${styles.waitingState}`} disabled>
+              Crashed at {multiplier.toFixed(2)}x
             </button>
           )}
         </div>
@@ -602,4 +595,5 @@ export const GameCrash: React.FC = () => {
     </div>
   );
 };
+
 export default GameCrash;

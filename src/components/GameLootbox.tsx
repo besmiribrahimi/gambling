@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useWallet, Skin } from "../context/WalletContext";
+import sound from "../lib/sound";
 import styles from "./lootbox.module.css";
 
 interface SkinTemplate {
@@ -13,24 +14,24 @@ interface SkinTemplate {
 
 const ITEMS: Record<Skin["rarity"], SkinTemplate[]> = {
   common: [
-    { name: "Axe | Rusty Shovel", rarity: "common", value: 20, color: "#007aff" },
-    { name: "P250 | Sand Dune", rarity: "common", value: 35, color: "#007aff" },
-    { name: "Spray | Angry Chicken", rarity: "common", value: 50, color: "#007aff" }
+    { name: "Axe | Rusty Trench Shovel", rarity: "common", value: 25, color: "#007aff" },
+    { name: "P250 | Sand Dune", rarity: "common", value: 40, color: "#007aff" },
+    { name: "Spray | Angry Kaiser", rarity: "common", value: 60, color: "#007aff" }
   ],
   rare: [
-    { name: "M4A4 | Neo-Noir", rarity: "rare", value: 180, color: "#bd00ff" },
-    { name: "Deagle | Blaze", rarity: "rare", value: 220, color: "#bd00ff" },
-    { name: "Pickaxe | Candy Axe", rarity: "rare", value: 280, color: "#bd00ff" }
+    { name: "M4A4 | Neo-Noir", rarity: "rare", value: 190, color: "#bd00ff" },
+    { name: "Deagle | Blaze", rarity: "rare", value: 240, color: "#bd00ff" },
+    { name: "Pickaxe | Trench Raider", rarity: "rare", value: 320, color: "#bd00ff" }
   ],
   legendary: [
-    { name: "AK-47 | Asiimov", rarity: "legendary", value: 650, color: "#ff007a" },
-    { name: "Scythe | Reaper", rarity: "legendary", value: 800, color: "#ff007a" },
-    { name: "Karambit | Crimson Web", rarity: "legendary", value: 950, color: "#ff007a" }
+    { name: "AK-47 | Asiimov", rarity: "legendary", value: 750, color: "#ff007a" },
+    { name: "Scythe | Reaper Blade", rarity: "legendary", value: 950, color: "#ff007a" },
+    { name: "Karambit | Crimson Web", rarity: "legendary", value: 1200, color: "#ff007a" }
   ],
   exotic: [
-    { name: "AWP | Dragon Lore", rarity: "exotic", value: 2500, color: "#ffaa00" },
-    { name: "Butterfly Knife | Fade", rarity: "exotic", value: 3800, color: "#ffaa00" },
-    { name: "Glider | Renegade Raider", rarity: "exotic", value: 5000, color: "#ffaa00" }
+    { name: "AWP | Dragon Lore", rarity: "exotic", value: 2800, color: "#ffaa00" },
+    { name: "Butterfly Knife | Fade", rarity: "exotic", value: 4200, color: "#ffaa00" },
+    { name: "Glider | Renegade Raider", rarity: "exotic", value: 6000, color: "#ffaa00" }
   ]
 };
 
@@ -38,7 +39,7 @@ interface Crate {
   id: string;
   name: string;
   cost: number;
-  odds: Record<Skin["rarity"], number>; // Sum must be 100
+  odds: Record<Skin["rarity"], number>;
 }
 
 const CRATES: Crate[] = [
@@ -63,8 +64,9 @@ const CRATES: Crate[] = [
 ];
 
 export const GameLootbox: React.FC = () => {
-  const { balance, setBalance, inventory, addSkinToInventory, sellSkin, addTransaction } = useWallet();
+  const { balance, setBalance, inventory, addSkinToInventory, sellSkin, sellMultipleSkins, addTransaction } = useWallet();
   const [isSpinning, setIsSpinning] = useState(false);
+  const [fastOpen, setFastOpen] = useState(false);
   const [trackItems, setTrackItems] = useState<SkinTemplate[]>([]);
   const [translateX, setTranslateX] = useState(0);
   const [transitionDur, setTransitionDur] = useState(0);
@@ -74,7 +76,6 @@ export const GameLootbox: React.FC = () => {
   
   const trackRef = useRef<HTMLDivElement | null>(null);
 
-  // Initialize track with static filler items
   useEffect(() => {
     const filler: SkinTemplate[] = [];
     for (let i = 0; i < 15; i++) {
@@ -86,8 +87,6 @@ export const GameLootbox: React.FC = () => {
   const getRandomRarity = (odds: Record<Skin["rarity"], number>): Skin["rarity"] => {
     const r = Math.random() * 100;
     let sum = 0;
-    
-    // Scan matching rates
     const rarities: Skin["rarity"][] = ["common", "rare", "legendary", "exotic"];
     for (const key of rarities) {
       sum += odds[key];
@@ -105,19 +104,18 @@ export const GameLootbox: React.FC = () => {
   const handleOpenCrate = (crate: Crate) => {
     if (isSpinning) return;
     if (balance < crate.cost) {
-      setAlert("Insufficient War Bonds balance to purchase this crate.");
+      setAlert("Insufficient War Bonds balance to open this crate.");
       return;
     }
 
+    sound.playChip();
     setAlert(null);
     setWonItem(null);
-    setBalance(balance - crate.cost);
+    setBalance((prev) => prev - crate.cost);
     addTransaction("lootbox", `Purchased Crate: ${crate.name}`, crate.cost, "lose", 0);
 
-    // Build random track array of 40 items
-    // Winning item is index 32
-    const tempTrack: SkinTemplate[] = [];
     const winningIndex = 32;
+    const tempTrack: SkinTemplate[] = [];
 
     for (let i = 0; i < 42; i++) {
       const rarity = getRandomRarity(crate.odds);
@@ -125,17 +123,25 @@ export const GameLootbox: React.FC = () => {
     }
 
     setTrackItems(tempTrack);
+    const won = tempTrack[winningIndex];
+
+    if (fastOpen) {
+      // Instant resolution
+      setWonItem(won);
+      if (won.rarity === "legendary" || won.rarity === "exotic") {
+        setFlashWin(true);
+        setTimeout(() => setFlashWin(false), 2500);
+        sound.playJackpot();
+      } else {
+        sound.playWin();
+      }
+      return;
+    }
+
     setTranslateX(0);
     setTransitionDur(0);
 
-    // Forces layout reflow before triggering translation transitions
     setTimeout(() => {
-      // Dimensions mapping:
-      // Item: 110px width. Gap: 10px. Width interval = 120px.
-      // Viewport width: 700px. Center threshold = 350px.
-      // Index 32 start coordinate is 32 * 120 = 3840px.
-      // Centered position offset = 3840 - (350 - 55) = 3545px.
-      // Add slight offset randomness so pointer stops randomly along the item card
       const itemWidth = 110;
       const gap = 10;
       const step = itemWidth + gap;
@@ -145,33 +151,41 @@ export const GameLootbox: React.FC = () => {
       const offsetToCenter = centerViewport - itemWidth / 2;
       const centerTarget = targetBase - offsetToCenter;
       
-      // Random offset of -40px to +40px (so item stops off-center)
       const randomOffset = Math.floor(Math.random() * 80) - 40;
       const finalTranslate = - (centerTarget + randomOffset);
 
-      setTransitionDur(4.0); // 4 seconds spin
+      setTransitionDur(3.8);
       setTranslateX(finalTranslate);
       setIsSpinning(true);
+
+      // Play tick sounds as cards scroll past
+      for (let i = 0; i < 28; i++) {
+        setTimeout(() => {
+          sound.playCrateTick();
+        }, i * (120 + i * 4));
+      }
     }, 50);
 
-    // Handle resolution
     setTimeout(() => {
       setIsSpinning(false);
-      const won = tempTrack[winningIndex];
       setWonItem(won);
       if (won.rarity === "legendary" || won.rarity === "exotic") {
         setFlashWin(true);
         setTimeout(() => setFlashWin(false), 2500);
+        sound.playJackpot();
+      } else {
+        sound.playWin();
       }
-    }, 4100);
+    }, 3900);
   };
 
   const handleSellWonItem = () => {
     if (!wonItem) return;
-    setBalance(balance + wonItem.value);
+    setBalance((prev) => prev + wonItem.value);
     addTransaction("lootbox", `Sold Won Item: ${wonItem.name}`, 0, "win", wonItem.value);
+    sound.playCoinLand();
     setWonItem(null);
-    setAlert(`Sold ${wonItem.name} for ${wonItem.value} War Bonds!`);
+    setAlert(`Sold ${wonItem.name} for +${wonItem.value} War Bonds!`);
     setTimeout(() => setAlert(null), 3000);
   };
 
@@ -184,12 +198,47 @@ export const GameLootbox: React.FC = () => {
       color: wonItem.color
     });
     setWonItem(null);
-    setAlert(`Saved ${wonItem.name} to your Inventory!`);
+    sound.playWin();
+    setAlert(`Saved ${wonItem.name} to your Inventory Vault!`);
+    setTimeout(() => setAlert(null), 3000);
+  };
+
+  const handleSellAllCommonRare = () => {
+    const commonRareIds = inventory
+      .filter((s) => s.rarity === "common" || s.rarity === "rare")
+      .map((s) => s.id);
+    
+    if (commonRareIds.length === 0) {
+      setAlert("No Common or Rare skins in inventory.");
+      setTimeout(() => setAlert(null), 2500);
+      return;
+    }
+
+    const { count, total } = sellMultipleSkins(commonRareIds);
+    setAlert(`Liquidated ${count} Common/Rare skins for +${total} War Bonds!`);
     setTimeout(() => setAlert(null), 3000);
   };
 
   return (
     <div className={styles.container}>
+      {/* Case Selections Header with Fast Open Toggle */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
+        <div>
+          <h2 style={{ fontFamily: "var(--font-family-title)", fontSize: "1.4rem", fontWeight: 800 }}>Trench Crate Opener</h2>
+          <span style={{ fontSize: "0.82rem", color: "var(--color-text-secondary)" }}>Unlock weapon finishes and trade for instant War Bonds</span>
+        </div>
+
+        <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", color: fastOpen ? "var(--color-primary)" : "var(--color-text-secondary)" }}>
+          <input
+            type="checkbox"
+            checked={fastOpen}
+            onChange={(e) => setFastOpen(e.target.checked)}
+            style={{ width: "16px", height: "16px", cursor: "pointer" }}
+          />
+          ⚡ Fast Open (Skip Animation)
+        </label>
+      </div>
+
       {/* Case Selections */}
       <div className={styles.casesRow}>
         {CRATES.map((crate) => (
@@ -209,14 +258,14 @@ export const GameLootbox: React.FC = () => {
               onClick={() => handleOpenCrate(crate)}
               disabled={isSpinning || wonItem !== null}
             >
-              Open Case
+              Open Case (${crate.cost})
             </button>
           </div>
         ))}
       </div>
 
       {alert && (
-        <div style={{ padding: "0.75rem", borderRadius: "8px", background: "rgba(0, 240, 255, 0.05)", border: "1px solid rgba(0, 240, 255, 0.15)", color: "var(--color-primary)", textAlign: "center", fontSize: "0.9rem" }}>
+        <div style={{ padding: "0.75rem", borderRadius: "8px", background: "rgba(0, 240, 255, 0.08)", border: "1px solid rgba(0, 240, 255, 0.2)", color: "var(--color-primary)", textAlign: "center", fontSize: "0.9rem", fontWeight: 700 }}>
           {alert}
         </div>
       )}
@@ -242,7 +291,7 @@ export const GameLootbox: React.FC = () => {
                 <span className={styles.itemLabel}>{item.name}</span>
                 <span 
                   className={styles.itemRarityBadge}
-                  style={{ background: `rgba(${item.rarity === "exotic" ? "255,170,0" : item.rarity === "legendary" ? "255,0,122" : item.rarity === "rare" ? "189,0,255" : "0,122,255"}, 0.15)` }}
+                  style={{ background: `rgba(${item.rarity === "exotic" ? "255,170,0" : item.rarity === "legendary" ? "255,0,122" : item.rarity === "rare" ? "189,0,255" : "0,122,255"}, 0.18)` }}
                 >
                   {item.rarity}
                 </span>
@@ -262,7 +311,7 @@ export const GameLootbox: React.FC = () => {
                 Sell for {wonItem.value} $
               </button>
               <button className={`${styles.resultBtn} ${styles.keepBtn}`} onClick={handleKeepWonItem}>
-                Keep Skin
+                Keep Skin in Vault
               </button>
             </div>
           </div>
@@ -272,10 +321,31 @@ export const GameLootbox: React.FC = () => {
       {/* Inventory Management Panel */}
       <div className={styles.inventorySection}>
         <div className={styles.inventoryHeader}>
-          <h3 className={styles.inventoryTitle}>Your Skin Inventory</h3>
-          <span style={{ fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
-            {inventory.length} Skins collected (Total Value: {inventory.reduce((sum, s) => sum + s.value, 0).toLocaleString()} $)
-          </span>
+          <div>
+            <h3 className={styles.inventoryTitle}>Your Skin Inventory Vault</h3>
+            <span style={{ fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
+              {inventory.length} Skins collected (Total Value: {inventory.reduce((sum, s) => sum + s.value, 0).toLocaleString()} $)
+            </span>
+          </div>
+
+          {inventory.length > 0 && (
+            <button
+              onClick={handleSellAllCommonRare}
+              style={{
+                background: "rgba(255, 23, 68, 0.15)",
+                border: "1px solid var(--color-danger)",
+                color: "var(--color-danger)",
+                padding: "0.4rem 0.8rem",
+                borderRadius: "6px",
+                fontFamily: "var(--font-family-title)",
+                fontSize: "0.75rem",
+                fontWeight: 800,
+                cursor: "pointer"
+              }}
+            >
+              Sell All Common/Rare
+            </button>
+          )}
         </div>
 
         <div className={styles.inventoryGrid}>
@@ -291,7 +361,7 @@ export const GameLootbox: React.FC = () => {
             ))
           ) : (
             <div className={styles.emptyInventory}>
-              Your inventory is empty. Open some crates to collect skins!
+              Your inventory is empty. Open some crates to collect tactical skins!
             </div>
           )}
         </div>
@@ -299,4 +369,5 @@ export const GameLootbox: React.FC = () => {
     </div>
   );
 };
+
 export default GameLootbox;

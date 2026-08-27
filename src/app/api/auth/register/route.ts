@@ -6,7 +6,7 @@ import { hashPassword, encryptSession } from "../../../../lib/auth";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { username, discord, roblox, password } = body;
+    const { username, discord, roblox, password, guestBalance, guestInventory, guestHistory } = body;
 
     // Anti-injection check: ensure all parameters are strings
     if (
@@ -69,22 +69,31 @@ export async function POST(request: Request) {
       );
     }
 
-    const userId = "u_" + Math.random().toString(36).substr(2, 9);
+    const userId = "u_" + Math.random().toString(36).substring(2, 11);
+    
+    // Smooth migration: if guest has balance >= 1000, keep their current balance, otherwise grant 1000 signin bonus
+    const startingBalance = typeof guestBalance === "number" && guestBalance > 0 ? guestBalance : 1000;
+    const initialInventory = Array.isArray(guestInventory) ? guestInventory : [];
+    const initialHistory = Array.isArray(guestHistory) ? guestHistory : [];
+
     const newUser: DBUser = {
       id: userId,
       username: trimmedUsername,
       discord: trimmedDiscord,
       roblox: trimmedRoblox,
       passwordHash: hashPassword(password),
-      balance: 500, // 500 signin bonus
-      inventory: [],
-      history: [],
-      lastClaimTime: null
+      balance: startingBalance,
+      role: "user",
+      isGuest: false,
+      inventory: initialInventory,
+      history: initialHistory,
+      lastClaimTime: null,
+      createdAt: new Date().toISOString()
     };
 
     await saveUser(newUser);
 
-    // Set secure cookie
+    // Set secure session cookie
     const token = encryptSession(userId);
     const cookieStore = await cookies();
     cookieStore.set("cw_session", token, {

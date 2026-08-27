@@ -22,6 +22,7 @@ export async function GET() {
     if (!user || user.isBanned) {
       const cookieStore = await cookies();
       cookieStore.delete("cw_session");
+      cookieStore.delete("cw_admin_session");
       return NextResponse.json({ loggedIn: false });
     }
 

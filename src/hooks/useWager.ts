@@ -1,10 +1,10 @@
-import { useWallet } from "../context/WalletContext";
+import { useWallet, GameType } from "../context/WalletContext";
 
 export function useWager() {
   const { balance, setBalance, addTransaction } = useWallet();
 
   const placeWager = (amount: number): boolean => {
-    if (balance < amount) return false;
+    if (balance < amount || amount <= 0) return false;
     setBalance((prev) => prev - amount);
     return true;
   };
@@ -13,7 +13,7 @@ export function useWager() {
     amount: number,
     payout: number,
     isWin: boolean,
-    type: "bet" | "crash" | "coinflip" | "lootbox" | "mines" | "slots",
+    type: GameType,
     description: string
   ) => {
     if (isWin && payout > 0) {

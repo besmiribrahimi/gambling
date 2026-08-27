@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useWallet } from "../context/WalletContext";
+import sound from "../lib/sound";
 import styles from "./betting.module.css";
 
 export const BettingArena: React.FC = () => {
@@ -9,9 +10,11 @@ export const BettingArena: React.FC = () => {
   const [selectedTeams, setSelectedTeams] = useState<Record<string, "teamA" | "teamB">>({});
   const [betAmounts, setBetAmounts] = useState<Record<string, string>>({});
   const [messages, setMessages] = useState<Record<string, { text: string; isError: boolean } | null>>({});
+  const [filterTab, setFilterTab] = useState<"all" | "live" | "upcoming" | "completed">("all");
 
   const handleSelectTeam = (matchId: string, team: "teamA" | "teamB") => {
     setSelectedTeams((prev) => ({ ...prev, [matchId]: team }));
+    sound.playClick();
   };
 
   const handleAmountChange = (matchId: string, value: string) => {
@@ -26,10 +29,10 @@ export const BettingArena: React.FC = () => {
     setBetAmounts((prev) => {
       const current = parseInt(prev[matchId] || "0");
       const nextVal = isNaN(current) ? chipValue : current + chipValue;
-      // Cap wager at active balance
       const cappedVal = Math.min(nextVal, balance);
       return { ...prev, [matchId]: cappedVal.toString() };
     });
+    sound.playChip();
   };
 
   const handlePlaceBet = (matchId: string) => {
@@ -38,7 +41,7 @@ export const BettingArena: React.FC = () => {
     const amount = parseInt(amountStr);
 
     if (!team) {
-      setMessages((prev) => ({ ...prev, [matchId]: { text: "Select YES or NO first.", isError: true } }));
+      setMessages((prev) => ({ ...prev, [matchId]: { text: "Select YES or NO prediction first.", isError: true } }));
       return;
     }
     if (isNaN(amount) || amount <= 0) {
@@ -63,6 +66,7 @@ export const BettingArena: React.FC = () => {
 
   const handleSimulateWinner = (matchId: string, winner: "teamA" | "teamB") => {
     resolveMatch(matchId, winner);
+    sound.playJackpot();
   };
 
   const getTierDetails = (factionName: string) => {
@@ -115,36 +119,87 @@ export const BettingArena: React.FC = () => {
     return "strobe-lowmid";
   };
 
+  const filteredMatches = matches.filter((m) => {
+    if (filterTab === "all") return true;
+    return m.status === filterTab;
+  });
+
   return (
     <div className={styles.container}>
       <div className={styles.headerRow}>
-        <h2 className={styles.title}>Roblox Entrenched Prediction Markets</h2>
-        <span className={styles.hotBadge} style={{ animation: "blinkSlow 1.5s infinite" }}>
-          🔥 HIGH VOLATILITY CONTRACTS
-        </span>
+        <div>
+          <h2 className={styles.title}>Roblox Entrenched Esports Markets</h2>
+          <span style={{ fontSize: "0.82rem", color: "var(--color-text-secondary)" }}>
+            Trade live predictive positions on the Entrenched League V championship tournament
+          </span>
+        </div>
+
+        {/* Filter Tabs */}
+        <div style={{ display: "flex", gap: "0.4rem" }}>
+          {(["all", "live", "upcoming", "completed"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => { setFilterTab(tab); sound.playClick(); }}
+              style={{
+                padding: "0.4rem 0.8rem",
+                borderRadius: "6px",
+                fontFamily: "var(--font-family-title)",
+                fontSize: "0.75rem",
+                fontWeight: 800,
+                textTransform: "uppercase",
+                background: filterTab === tab ? "var(--color-primary)" : "rgba(255,255,255,0.05)",
+                color: filterTab === tab ? "#000" : "#fff",
+                border: "1px solid rgba(255,255,255,0.08)"
+              }}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className={styles.matchGrid}>
-        {matches
-          .filter((match) => match.status !== "upcoming")
-          .map((match) => {
+        {filteredMatches.map((match) => {
           const selectedTeam = selectedTeams[match.id];
           const betAmount = betAmounts[match.id] || "";
           const msg = messages[match.id];
           const strobe = getStrobeClass(match.teamA, match.teamB);
 
+          const volA = match.volumeA || 10000;
+          const volB = match.volumeB || 10000;
+          const totalVol = volA + volB;
+          const pctA = Math.round((volA / totalVol) * 100);
+          const pctB = 100 - pctA;
+
+          const currentOdds = selectedTeam === "teamA" ? match.oddsA : match.oddsB;
+          const estPayout = betAmount && !isNaN(parseInt(betAmount)) 
+            ? Math.round(parseInt(betAmount) * currentOdds) 
+            : 0;
+
           return (
             <div key={match.id} className={`${styles.matchCard} ${strobe}`}>
               <div className={styles.matchHeader}>
                 <span className={styles.gameName}>{match.game}</span>
-                <span className={`${styles.statusTag} ${match.status === "live" ? `${styles.live} blink-fast` : styles.completed}`}>
-                  {match.status === "live" ? "LIVE CONTRACT" : "RESOLVED"}
+                <span className={`${styles.statusTag} ${match.status === "live" ? `${styles.live} blink-fast` : match.status === "upcoming" ? styles.upcoming : styles.completed}`}>
+                  {match.status === "live" ? "🔴 LIVE CONTRACT" : match.status === "upcoming" ? "⏳ UPCOMING" : "RESOLVED"}
                 </span>
               </div>
 
               <div className={styles.questionContainer}>
                 {renderBadges(match.teamA, match.teamB)}
                 <p className={styles.questionText}>{match.time}</p>
+              </div>
+
+              {/* Pool distribution bar */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: "var(--color-text-secondary)", fontWeight: 700 }}>
+                  <span>YES {pctA}% ({volA.toLocaleString()} $)</span>
+                  <span>NO {pctB}% ({volB.toLocaleString()} $)</span>
+                </div>
+                <div style={{ height: "6px", width: "100%", background: "rgba(255,255,255,0.06)", borderRadius: "3px", overflow: "hidden", display: "flex" }}>
+                  <div style={{ width: `${pctA}%`, background: "var(--color-primary)", height: "100%" }} />
+                  <div style={{ width: `${pctB}%`, background: "var(--color-secondary)", height: "100%" }} />
+                </div>
               </div>
 
               {match.status !== "completed" ? (
@@ -186,42 +241,19 @@ export const BettingArena: React.FC = () => {
 
                     {/* Casino Chip Selector Panel */}
                     <div className={styles.chipRow}>
-                      <div 
-                        className={`${styles.chip} ${styles.chipRed}`} 
-                        onClick={() => handleAddChip(match.id, 10)}
-                        title="Add 10 War Bonds"
-                      >
-                        10
-                      </div>
-                      <div 
-                        className={`${styles.chip} ${styles.chipGreen}`} 
-                        onClick={() => handleAddChip(match.id, 50)}
-                        title="Add 50 War Bonds"
-                      >
-                        50
-                      </div>
-                      <div 
-                        className={`${styles.chip} ${styles.chipBlue}`} 
-                        onClick={() => handleAddChip(match.id, 100)}
-                        title="Add 100 War Bonds"
-                      >
-                        100
-                      </div>
-                      <div 
-                        className={`${styles.chip} ${styles.chipPurple}`} 
-                        onClick={() => handleAddChip(match.id, 500)}
-                        title="Add 500 War Bonds"
-                      >
-                        500
-                      </div>
-                      <div 
-                        className={`${styles.chip} ${styles.chipGold}`} 
-                        onClick={() => handleAddChip(match.id, 1000)}
-                        title="Add 1,000 War Bonds"
-                      >
-                        1k
-                      </div>
+                      <div className="casino-chip chip-white" onClick={() => handleAddChip(match.id, 10)}>10</div>
+                      <div className="casino-chip chip-red" onClick={() => handleAddChip(match.id, 50)}>50</div>
+                      <div className="casino-chip chip-blue" onClick={() => handleAddChip(match.id, 100)}>100</div>
+                      <div className="casino-chip chip-purple" onClick={() => handleAddChip(match.id, 500)}>500</div>
+                      <div className="casino-chip chip-gold" onClick={() => handleAddChip(match.id, 1000)}>1k</div>
                     </div>
+
+                    {selectedTeam && estPayout > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>
+                        <span>Potential Payout:</span>
+                        <span style={{ color: "var(--color-success)", fontWeight: 800 }}>+{estPayout} War Bonds</span>
+                      </div>
+                    )}
 
                     <button
                       id={`btn-bet-submit-${match.id}`}
@@ -229,10 +261,9 @@ export const BettingArena: React.FC = () => {
                       onClick={() => handlePlaceBet(match.id)}
                       disabled={!selectedTeam}
                     >
-                      Submit Contract
+                      Submit Contract Position
                     </button>
 
-                    {/* Feedback message */}
                     {msg && (
                       <div className={`${styles.msg} ${msg.isError ? styles.errorMsg : styles.successMsg}`}>
                         {msg.text}
@@ -249,12 +280,11 @@ export const BettingArena: React.FC = () => {
                 </div>
               )}
 
-              {/* Developer Simulation Controls */}
+              {/* Simulation Settlement Controls */}
               {match.status !== "completed" && (
                 <div className={styles.devPanel}>
                   <div className={styles.devHeader}>
-                    <span className="blink-fast" style={{ color: "var(--color-danger)" }}>⚠️</span> 
-                    DEV RESOLUTION CONSOLE
+                    <span>⚙️</span> SETTLE MATCH CONSOLE
                   </div>
                   <div className={styles.devBtns}>
                     <button 
@@ -278,16 +308,8 @@ export const BettingArena: React.FC = () => {
           );
         })}
       </div>
-
-      {/* Upcoming Matches Banner */}
-      <div className={styles.noUpcomingBanner}>
-        <span className={styles.bannerIcon}>📅</span>
-        <div className={styles.bannerContent}>
-          <h4 className={styles.bannerTitle}>No Upcoming Matches</h4>
-          <p className={styles.bannerText}>All scheduled matches are currently live or completed. Check back later for new contracts!</p>
-        </div>
-      </div>
     </div>
   );
 };
+
 export default BettingArena;

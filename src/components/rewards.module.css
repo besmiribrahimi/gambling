@@ -1,0 +1,249 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(3, 5, 10, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal {
+  background: linear-gradient(135deg, #131a2c 0%, #0a0e19 100%);
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  border-radius: var(--border-radius-lg);
+  max-width: 720px;
+  width: 100%;
+  padding: 2rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 215, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.closeBtn {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  font-size: 1.2rem;
+  color: var(--color-text-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  transition: all var(--transition-fast);
+}
+
+.closeBtn:hover {
+  background: rgba(255, 23, 68, 0.2);
+  color: var(--color-danger);
+}
+
+.modalHeader {
+  text-align: center;
+}
+
+.modalTitle {
+  font-family: var(--font-family-title);
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: #ffd700;
+  text-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+}
+
+.modalSubtitle {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin-top: 0.25rem;
+}
+
+.gridContent {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+@media (max-width: 700px) {
+  .gridContent {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Wheel Container */
+.wheelWrapper {
+  position: relative;
+  width: 260px;
+  height: 260px;
+  margin: 0 auto;
+}
+
+.wheelPointer {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: 0;
+  height: 0;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-top: 22px solid #ffd700;
+  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
+}
+
+.wheelDisk {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 4px solid #ffd700;
+  box-shadow: 0 0 25px rgba(255, 215, 0, 0.3);
+  overflow: hidden;
+  position: relative;
+}
+
+.centerCap {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 50px;
+  height: 50px;
+  background: radial-gradient(circle, #2c3345 0%, #111520 100%);
+  border: 3px solid #ffd700;
+  border-radius: 50%;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.spinWheelBtn {
+  margin-top: 1rem;
+  width: 100%;
+  background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+  color: #000;
+  font-family: var(--font-family-title);
+  font-size: 1rem;
+  font-weight: 900;
+  padding: 0.8rem;
+  border-radius: var(--border-radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  box-shadow: 0 4px 16px rgba(255, 215, 0, 0.35);
+  transition: all var(--transition-bounce);
+}
+
+.spinWheelBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(255, 215, 0, 0.55);
+}
+
+/* Streak & Rakeback Right Column */
+.rewardsRightCol {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.streakCard {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--border-radius-sm);
+  padding: 1rem;
+}
+
+.streakTitle {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #fff;
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.streakDaysGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.35rem;
+}
+
+.streakDay {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  padding: 0.35rem 0.1rem;
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.streakDayActive {
+  background: rgba(255, 215, 0, 0.15);
+  border-color: #ffd700;
+  color: #ffd700;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+}
+
+.rakebackCard {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.08) 0%, rgba(189, 0, 255, 0.08) 100%);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  border-radius: var(--border-radius-sm);
+  padding: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.rakebackHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rakebackTitle {
+  font-family: var(--font-family-title);
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--color-primary);
+}
+
+.rakebackAmount {
+  font-family: var(--font-family-title);
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #fff;
+}
+
+.claimRakebackBtn {
+  background: var(--color-primary);
+  color: #000;
+  font-family: var(--font-family-title);
+  font-size: 0.85rem;
+  font-weight: 900;
+  padding: 0.6rem;
+  border-radius: var(--border-radius-sm);
+  text-transform: uppercase;
+  transition: all var(--transition-fast);
+}
+
+.claimRakebackBtn:hover:not(:disabled) {
+  box-shadow: var(--glow-primary);
+}

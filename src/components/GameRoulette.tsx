@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useWallet } from "../context/WalletContext";
+import sound from "../lib/sound";
 import styles from "./roulette.module.css";
 
 interface RouletteSlot {
@@ -10,7 +11,6 @@ interface RouletteSlot {
   label: string;
 }
 
-// 15 slots matching CSGO/Roblox wagering standards: Red (2x), Black (2x), Gold (14x)
 const ROULETTE_SLOTS: RouletteSlot[] = [
   { index: 0, color: "gold", label: "0" },
   { index: 1, color: "red", label: "1" },
@@ -32,7 +32,7 @@ const ROULETTE_SLOTS: RouletteSlot[] = [
 export const GameRoulette: React.FC = () => {
   const { balance, setBalance, addTransaction } = useWallet();
   const [selectedColor, setSelectedColor] = useState<"red" | "black" | "gold" | null>(null);
-  const [wager, setWager] = useState("");
+  const [wager, setWager] = useState("100");
   const [isSpinning, setIsSpinning] = useState(false);
   const [alertMsg, setAlertMsg] = useState<{ text: string; isError: boolean } | null>(null);
   const [wheelRotation, setWheelRotation] = useState(0);
@@ -66,6 +66,7 @@ export const GameRoulette: React.FC = () => {
     const nextVal = isNaN(current) ? chipValue : current + chipValue;
     const cappedVal = Math.min(nextVal, balance);
     setWager(cappedVal.toString());
+    sound.playChip();
   };
 
   const handleSpinWheel = () => {
@@ -87,31 +88,23 @@ export const GameRoulette: React.FC = () => {
       return;
     }
 
-    // Deduct balance and begin spin
-    setBalance(balance - betAmount);
+    setBalance((prev) => prev - betAmount);
     setIsSpinning(true);
     setAlertMsg(null);
+    sound.playChip();
 
-    // 1. Pick a random slot index (0 to 14)
     const winningIndex = Math.floor(Math.random() * ROULETTE_SLOTS.length);
     const winningSlot = ROULETTE_SLOTS[winningIndex];
 
-    // 2. Calculate the rotation required to align target slice with the top pointer (at 270 deg)
-    // Slice angle is 24 degrees (360/15). Center of slice is i * 24 + 12.
-    // Alignment formula: rotation = 270 - (i * 24 + 12) = 258 - i * 24.
     const sliceAngle = 360 / ROULETTE_SLOTS.length;
     const alignAngle = 270 - (winningIndex * sliceAngle + sliceAngle / 2);
     
-    // Add multiple spins for visual velocity
     const extraSpins = 360 * 6; // 6 full rotations
-    
-    // Keep adding positive rotations to keep transition smooth
     const currentBaseSpins = Math.floor(wheelRotation / 360) * 360;
     const nextRotation = currentBaseSpins + extraSpins + alignAngle;
 
     setWheelRotation(nextRotation);
 
-    // Spin resolution timeout (4.5s matches transition duration in JSX inline style)
     spinTimeoutRef.current = setTimeout(() => {
       setIsSpinning(false);
       
@@ -125,13 +118,15 @@ export const GameRoulette: React.FC = () => {
         setFlashWin(true);
         setTimeout(() => setFlashWin(false), 2000);
         setBalance((prev) => prev + payout);
+        sound.playWin();
+
         setAlertMsg({
-          text: `Victory! Landed on ${winningSlot.color.toUpperCase()} (${winningSlot.label}). Won +${payout} War Bonds!`,
+          text: `Victory! Landed on ${winningSlot.color.toUpperCase()} (${winningSlot.label})! Won +${payout} War Bonds!`,
           isError: false
         });
         addTransaction(
           "bet",
-          `Won Roulette: bet on ${selectedColor.toUpperCase()} (Landed: ${winningSlot.color.toUpperCase()})`,
+          `Won Roulette: bet on ${selectedColor.toUpperCase()} (Landed: ${winningSlot.color.toUpperCase()} ${winningSlot.label})`,
           betAmount,
           "win",
           payout
@@ -143,7 +138,7 @@ export const GameRoulette: React.FC = () => {
         });
         addTransaction(
           "bet",
-          `Lost Roulette: bet on ${selectedColor.toUpperCase()} (Landed: ${winningSlot.color.toUpperCase()})`,
+          `Lost Roulette: bet on ${selectedColor.toUpperCase()} (Landed: ${winningSlot.color.toUpperCase()} ${winningSlot.label})`,
           betAmount,
           "lose",
           0
@@ -154,7 +149,6 @@ export const GameRoulette: React.FC = () => {
     }, 4600);
   };
 
-  // Helper to generate circular sector path in SVG
   const radius = 150;
   const sliceAngle = 360 / ROULETTE_SLOTS.length;
 
@@ -167,7 +161,7 @@ export const GameRoulette: React.FC = () => {
   };
 
   const getLabelCoords = (midAngle: number) => {
-    const labelRadius = radius * 0.72; // Place label text at 72% out from center
+    const labelRadius = radius * 0.72;
     const x = radius + labelRadius * Math.cos((midAngle * Math.PI) / 180);
     const y = radius + labelRadius * Math.sin((midAngle * Math.PI) / 180);
     return { x, y };
@@ -176,7 +170,7 @@ export const GameRoulette: React.FC = () => {
   const getFillColor = (color: string) => {
     if (color === "red") return "#ff2e2e";
     if (color === "black") return "#1b1d26";
-    return "#ffaa00"; // gold
+    return "#ffd700";
   };
 
   return (
@@ -232,9 +226,9 @@ export const GameRoulette: React.FC = () => {
         {/* Wager Dashboard Section */}
         <div className={styles.wagerPanel}>
           <div className={styles.sectionHeader}>
-            <h2 className={styles.title}>WW1 Trench Roulette</h2>
+            <h2 className={styles.title}>Trench Roulette Wheel</h2>
             <p className={styles.subtitle}>
-              Stake your War Bonds on Red, Black, or Gold. Spin to claim victory.
+              Place your War Bonds on Red (2x), Black (2x), or Gold (14x). Spin to conquer the battlefield.
             </p>
           </div>
 
@@ -242,7 +236,7 @@ export const GameRoulette: React.FC = () => {
           <div className={styles.betBoard}>
             <button
               disabled={isSpinning}
-              onClick={() => setSelectedColor("red")}
+              onClick={() => { setSelectedColor("red"); sound.playClick(); }}
               className={`${styles.betOption} ${styles.betOptionRed} ${
                 selectedColor === "red" ? styles.betOptionRedActive : ""
               }`}
@@ -253,7 +247,7 @@ export const GameRoulette: React.FC = () => {
 
             <button
               disabled={isSpinning}
-              onClick={() => setSelectedColor("black")}
+              onClick={() => { setSelectedColor("black"); sound.playClick(); }}
               className={`${styles.betOption} ${styles.betOptionBlack} ${
                 selectedColor === "black" ? styles.betOptionBlackActive : ""
               }`}
@@ -264,7 +258,7 @@ export const GameRoulette: React.FC = () => {
 
             <button
               disabled={isSpinning}
-              onClick={() => setSelectedColor("gold")}
+              onClick={() => { setSelectedColor("gold"); sound.playClick(); }}
               className={`${styles.betOption} ${styles.betOptionGold} ${
                 selectedColor === "gold" ? styles.betOptionGoldActive : ""
               }`}
@@ -299,35 +293,35 @@ export const GameRoulette: React.FC = () => {
             <div className={styles.chipRow}>
               <button
                 disabled={isSpinning}
-                className={`${styles.chip} ${styles.chipRed}`}
+                className="casino-chip chip-white"
                 onClick={() => handleAddChip(10)}
               >
                 10
               </button>
               <button
                 disabled={isSpinning}
-                className={`${styles.chip} ${styles.chipGreen}`}
+                className="casino-chip chip-red"
                 onClick={() => handleAddChip(50)}
               >
                 50
               </button>
               <button
                 disabled={isSpinning}
-                className={`${styles.chip} ${styles.chipBlue}`}
+                className="casino-chip chip-blue"
                 onClick={() => handleAddChip(100)}
               >
                 100
               </button>
               <button
                 disabled={isSpinning}
-                className={`${styles.chip} ${styles.chipPurple}`}
+                className="casino-chip chip-purple"
                 onClick={() => handleAddChip(500)}
               >
                 500
               </button>
               <button
                 disabled={isSpinning}
-                className={`${styles.chip} ${styles.chipGold}`}
+                className="casino-chip chip-gold"
                 onClick={() => handleAddChip(1000)}
               >
                 1k
@@ -340,7 +334,7 @@ export const GameRoulette: React.FC = () => {
             className={styles.spinBtn}
             onClick={handleSpinWheel}
           >
-            {isSpinning ? "Authorizing Spin..." : "Spin Wheel"}
+            {isSpinning ? "Wheel Spinning..." : `Spin Wheel (${wager || 0} $)`}
           </button>
 
           {/* Feedback alert box */}
